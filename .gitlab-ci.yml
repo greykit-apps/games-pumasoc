@@ -1,3 +1,4 @@
+# Deploys to both pumasoc.greykit.com and greykit.com/games/pumasoc on every main commit.
 stages:
   - deploy
 
