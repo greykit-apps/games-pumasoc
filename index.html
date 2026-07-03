@@ -887,6 +887,21 @@ body::after {
 .vuln-id { color: var(--red); width: 140px; }
 .vuln-node { color: var(--amber); width: 80px; }
 .vuln-sev { width: 60px; }
+/* ── Network minimap ─────────────────────────────────── */
+#netmap { width: 100%; max-height: 300px; display: block; margin: 2px auto 0; }
+#netmap .nm-link { stroke: rgba(0, 255, 65, 0.18); stroke-width: 1; }
+#netmap .nm-node rect { fill: rgba(0, 255, 65, 0.06); stroke: var(--green-dim); stroke-width: 1; }
+#netmap .nm-node text { fill: var(--green-dim); font-size: 6px; letter-spacing: 0.5px; }
+#netmap .nm-node.vulnerable rect { stroke: var(--amber); }
+#netmap .nm-node.vulnerable text { fill: var(--amber); }
+#netmap .nm-node.attack rect { stroke: var(--red); fill: rgba(255, 45, 85, 0.16); animation: nm-pulse 1s infinite; }
+#netmap .nm-node.attack text { fill: var(--red); }
+#netmap .nm-node.breached rect { stroke: var(--red); fill: rgba(255, 45, 85, 0.38); }
+#netmap .nm-node.breached text { fill: var(--red); font-weight: 700; }
+#netmap .nm-packet { fill: var(--red); filter: drop-shadow(0 0 2px var(--red)); }
+@keyframes nm-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.sev-crit { color: var(--red); font-weight: 700; text-shadow: 0 0 4px var(--red); }
 .sev-high { color: var(--red); }
 .sev-med { color: var(--amber); }
 .sev-low { color: var(--green-dim); }
@@ -1788,6 +1803,10 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
           <span class="stat-val" id="stat-threats">0</span>
         </div>
       </div>
+      <div class="ops-section" id="netmap-section">
+        <div class="ops-section-title">── NETWORK MAP ──────────</div>
+        <svg id="netmap" viewBox="0 0 230 385" role="img" aria-label="Infrastructure network map — node colors show health status"></svg>
+      </div>
       <div class="ops-section" id="initiatives-section" style="display:none">
         <div class="ops-section-title">── INITIATIVES ──────────</div>
         <div id="initiatives-list"></div>
@@ -1827,10 +1846,10 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
       <div class="ops-section">
         <div class="ops-section-title">── STAFFING ─────────────</div>
         <div id="analyst-roster"></div>
-        <button class="action-btn" id="hire-btn" onclick="hireAnalyst()" title="Add a SOC analyst (max 6). More analysts = more parallel incident response.">▶ HIRE ANALYST<span class="btn-cost" id="hire-cost">$75k</span></button>
+        <button class="action-btn" id="hire-btn" onclick="hireAnalyst()" title="Add a SOC analyst (max 8). More analysts = more parallel incident response.">▶ HIRE ANALYST<span class="btn-cost" id="hire-cost">$75k</span></button>
         <button class="action-btn" id="training-btn" onclick="startTraining()" title="+10% IR speed for all analysts (max +30%). Ties up one analyst during training.">▶ SEND TO TRAINING<span class="btn-cost">$50k</span></button>
-        <button class="action-btn" id="hunt-btn" onclick="startHunt()" title="Proactively discover hidden threats. Requires one free analyst for 4 game hours.">▶ THREAT HUNT<span class="btn-cost">$60k</span></button>
-        <button class="action-btn" id="tabletop-btn" onclick="startTabletop()" title="+15% IR speed bonus for 2 game hours. Requires one free analyst.">▶ TABLETOP EXERCISE<span class="btn-cost">$25k</span></button>
+        <button class="action-btn" id="hunt-btn" onclick="startHunt()" title="Proactively discover hidden threats. Requires one free analyst for 12 game hours.">▶ THREAT HUNT<span class="btn-cost">$60k</span></button>
+        <button class="action-btn" id="tabletop-btn" onclick="startTabletop()" title="+15% IR speed bonus for 48 game hours after the 8-hour exercise. Requires one free analyst.">▶ TABLETOP EXERCISE<span class="btn-cost">$25k</span></button>
         <button class="action-btn" id="patch-sprint-btn" onclick="startPatchSprint()" title="Remediate low-severity vulnerabilities. Requires one free analyst.">▶ PATCH SPRINT<span class="btn-cost">$25k</span></button>
         <button class="action-btn" id="osint-btn" onclick="startOSINT()" title="Gather open-source intelligence. May reveal threat actor TTPs or vulnerabilities.">▶ OSINT RESEARCH<span class="btn-cost">$40k</span></button>
       </div>
@@ -2118,16 +2137,16 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
           <li>Incident card appears in the <strong>centre panel</strong> with a breach countdown.</li>
           <li>Click <strong>ASSIGN ANALYST</strong> — a free analyst begins working it.</li>
           <li>Analyst works through: <span class="help-stage">TRIAGE → CONTAIN → ERADICATE → RECOVER</span></li>
-          <li>A <strong>LESSONS LEARNED</strong> sign-off appears after — click it for a +1% IR speed bonus in that category (stacks up to 25%).</li>
+          <li>On RECOVER completing, the analyst is freed and the incident bonus paid immediately. A <strong>LESSONS LEARNED</strong> sign-off lingers for 2h — click it for an optional +1% IR speed bonus in that category (stacks up to 25%). Nothing is lost if you skip it.</li>
         </ol>
 
         <div class="help-section-title" role="heading" aria-level="3">KEY STATS</div>
         <ul>
           <li><strong>Coverage %</strong> — detection chance on spawn. Your primary defence. Target 50%+ immediately.</li>
-          <li><strong>MTTD</strong> — Mean Time to Detect: how long before an undetected threat is eventually caught. Lower is safer.</li>
-          <li><strong>Vuln Score</strong> — directly increases threat spawn frequency. Patch regularly; don't let it compound.</li>
+          <li><strong>MTTD</strong> — Mean Time to Detect: the average time before an undetected threat is surfaced. If it stays close to the breach window, lurkers detonate before you find them. Rules and intel feeds drive it down.</li>
+          <li><strong>Vuln Score</strong> — directly increases threat spawn frequency. ALL unpatched vulns count, including ones you haven't scanned for — unknown exposure is still exposure. Scan to reveal what to patch.</li>
           <li><strong>Analysts Free</strong> — your throughput ceiling. Running 0 free while incidents pile up is the most common way to lose.</li>
-          <li><strong>Budget</strong> — hits zero and paid services (MSSP, SAT, Consultant) auto-cancel. Idle money doesn't defend you. Spend it.</li>
+          <li><strong>Budget</strong> — MSSP/SAT run on 7-day contracts you must renew; a consultant is dropped if you're broke at an income tick. Idle money doesn't defend you. Spend it.</li>
         </ul>
 
         <div class="help-section-title" role="heading" aria-level="3">RANDOM EVENTS</div>
@@ -2152,7 +2171,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
         <div class="help-section-title" role="heading" aria-level="3">VULNERABILITY MANAGEMENT</div>
         <div class="help-cap-row">
           <span class="help-cap-name">VULN MGMT — $15k scan, variable patch costs</span>
-          <span class="help-cap-desc">Run a scan to discover CVEs across your infrastructure. Patch individually (HIGH: $8–12k, MED: $3–6k, LOW: $1–3k), patch all criticals at a small discount, or patch everything with a 15% bulk discount. Vuln Score directly accelerates threat spawn rate.</span>
+          <span class="help-cap-desc">Run a scan to discover CVEs across your infrastructure. Patch individually (CRIT: $15–25k, HIGH: $8–12k, MED: $3–6k, LOW: $1–3k), patch CRIT/HIGH at a discount, or patch everything with a 15% bulk discount. Vuln Score counts every unpatched vuln — discovered or not — and directly accelerates threat spawn rate.</span>
         </div>
 
         <div class="help-section-title" role="heading" aria-level="3">AUTOMATED RESPONSE</div>
@@ -2164,7 +2183,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
         <div class="help-section-title" role="heading" aria-level="3">ADVERSARIAL TESTING</div>
         <div class="help-cap-row">
           <span class="help-cap-name">RED TEAM — $30k–$150k per engagement</span>
-          <span class="help-cap-desc">Commission a penetration test. While the engagement runs, that attack category is suppressed — all threats in it auto-detect. On completion you receive a coverage bonus and SIEM rule improvement for that category. Use it to shore up a detection blind spot while engineers catch up.</span>
+          <span class="help-cap-desc">Commission a penetration test. On completion, findings permanently close detection gaps (+2–6% coverage, up to +10% total), discover hidden vulns, and suppress an attack category related to the engagement type for 48h — threats in it auto-detect. The Full Red Team Engagement targets whichever category your detection rules are weakest in, for 72h.</span>
         </div>
       </div>
 
@@ -2200,11 +2219,11 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
 
         <div class="help-section-title" role="heading" aria-level="3">PARTNERS</div>
         <div class="help-cap-row">
-          <span class="help-cap-name">SECURITY AWARENESS TRAINING — $20k–$100k setup + $15k–$40k/cycle</span>
-          <span class="help-cap-desc">Three tiers blocking 25%–60% of Initial Access attempts at the employee layer — the threat never enters your environment. Higher tiers also add up to +10% detection coverage. Ongoing cost; auto-cancels on budget shortfall. Even the base tier pays for itself within a few income cycles.</span>
+          <span class="help-cap-name">SECURITY AWARENESS TRAINING — $20k–$100k for a 7-day term, cheaper renewals</span>
+          <span class="help-cap-desc">Three tiers blocking 25%–60% of Initial Access attempts at the employee layer — the threat never enters your environment. Initial Access is the most common technique in the wild, so this bites. Higher tiers also add up to +10% detection coverage. Renew before the 7-day term lapses.</span>
         </div>
         <div class="help-cap-row">
-          <span class="help-cap-name">MSSP — $100k–$350k setup + $10k–$50k/cycle</span>
+          <span class="help-cap-name">MSSP — $100k–$350k for a 7-day contract, $10k–$50k renewals</span>
           <span class="help-cap-desc">Three tiers: Alert Monitoring (auto-assign incidents), Co-Managed SOC (+ auto-sign lessons learned, +10% IR speed), Fully Managed SOC (+ overflow analyst capacity, +15% IR speed). A safety net that escalates from triage assist to full co-management. Only worth it when you're consistently running out of free analysts.</span>
         </div>
         <div class="help-cap-row">
@@ -2349,7 +2368,8 @@ const DIFFICULTIES = {
     incomeAmount: 75000,
     analystTotal: 3,
     coverageBase: 45,          // actual detection base — used in calcCoverage()
-    vulnScore: 45,
+    vulnCounts: { HIGH: 4, MED: 4, LOW: 4 }, // starting vuln score ≈ 46
+    firstThreatDelay: 240,     // game-mins before the first threat spawns
     spawnMult: 0.75,           // 25% fewer threats spawned
     breachDwellMins: 720,      // undetected threat grace window (game-mins)
     unhandledBreachMins: 1440, // unhandled incident grace window (game-mins)
@@ -2361,7 +2381,8 @@ const DIFFICULTIES = {
     incomeAmount: 50000,
     analystTotal: 2,
     coverageBase: 25,          // baseline — unchanged from before
-    vulnScore: 65,
+    vulnCounts: { HIGH: 6, MED: 6, LOW: 5 }, // starting vuln score ≈ 64
+    firstThreatDelay: 300,     // a full real-time minute to orient and make opening buys
     spawnMult: 1.0,
     breachDwellMins: 600,
     unhandledBreachMins: 1200,
@@ -2373,7 +2394,8 @@ const DIFFICULTIES = {
     incomeAmount: 30000,
     analystTotal: 1,
     coverageBase: 10,          // real 10% detection penalty — must invest in rules fast
-    vulnScore: 80,
+    vulnCounts: { HIGH: 8, MED: 8, LOW: 6 }, // starting vuln score ≈ 82
+    firstThreatDelay: 180,     // Hunter gets no breathing room — that's the brand
     spawnMult: 1.2,            // 20% more threats
     breachDwellMins: 480,      // tighter undetected window
     unhandledBreachMins: 960,  // tighter unhandled window
@@ -2422,6 +2444,18 @@ const TECHNIQUES = {
   'Exfiltration':         ['Cloud Sync Exfil','FTP Exfiltration','DNS Data Exfil','HTTPS Exfil'],
   'Impact':               ['Ransomware Deploy','Data Destruction','Web Defacement','Crypto Mining'],
 };
+
+// Shared vulnerability data — one canonical severity vocabulary: CRIT / HIGH / MED / LOW
+const VULN_NAMES = [
+  'Remote Code Execution','Privilege Escalation','SQL Injection','Buffer Overflow',
+  'Authentication Bypass','Path Traversal','XXE Injection','Deserialization',
+  'Unpatched OpenSSL','Log4j Variant','SMB Relay','Kerberos Delegation',
+  'Outdated TLS','Default Credentials','Exposed API Key','SSRF',
+  'NTLM Relay','Insecure Deserialization','Open Redirect','XML External Entity',
+];
+function vulnPatchCost(sev) {
+  return ({ CRIT: rnd(15, 25), HIGH: rnd(8, 12), MED: rnd(3, 6), LOW: rnd(1, 3) }[sev] || 5) * 1000;
+}
 
 const NODE_DEFS = [
   { id:'INET',    type:'internet',   label:'INET',     x:115, y:22,  breachEffect: null },
@@ -2532,12 +2566,14 @@ const RANDOM_EVENTS = [
   { type:'audit',   sev:'WARN', name:'Emergency Budget Audit', msg:'Regulatory audit triggered — emergency reserve funds seized',       duration:0,    coveragePenalty:0, vulnPenalty:0, budgetHit:20000 },
 ];
 
+// suppressPool: categories the engagement's findings can suppress on completion.
+// 'red' (full engagement) instead targets your weakest detection category.
 const REDTEAM_OPTIONS = [
-  { id:'ext',     name:'External Network Pentest',   desc:'Simulate external attacker targeting internet-facing assets',      cost:50000,  durationMins:1440 },
-  { id:'int',     name:'Internal Network Assessment', desc:'Assume-breach simulation — lateral movement and privilege escalation', cost:75000, durationMins:2880 },
-  { id:'phish',   name:'Phishing Simulation',        desc:'Social engineering exercise targeting all user accounts',         cost:30000,  durationMins:720  },
-  { id:'cloud',   name:'Cloud Security Review',      desc:'AWS/Azure configuration audit and privilege escalation testing',  cost:100000, durationMins:2160 },
-  { id:'red',     name:'Full Red Team Engagement',   desc:'Adversary simulation: end-to-end APT-style attack chain',        cost:150000, durationMins:4320 },
+  { id:'ext',     name:'External Network Pentest',   desc:'Simulate external attacker targeting internet-facing assets',      cost:50000,  durationMins:1440, suppressPool:['Initial Access','Discovery'] },
+  { id:'int',     name:'Internal Network Assessment', desc:'Assume-breach simulation — lateral movement and privilege escalation', cost:75000, durationMins:2880, suppressPool:['Lateral Movement','Privilege Escalation','Credential Access'] },
+  { id:'phish',   name:'Phishing Simulation',        desc:'Social engineering exercise targeting all user accounts',         cost:30000,  durationMins:720,  suppressPool:['Initial Access'] },
+  { id:'cloud',   name:'Cloud Security Review',      desc:'AWS/Azure configuration audit and privilege escalation testing',  cost:100000, durationMins:2160, suppressPool:['Persistence','Privilege Escalation'] },
+  { id:'red',     name:'Full Red Team Engagement',   desc:'Adversary simulation: end-to-end APT-style attack chain',        cost:150000, durationMins:4320, suppressPool:null, suppressDuration:4320 },
 ];
 
 const INTEL_FEED_DURATION_DAYS = 7;           // subscription lasts 7 game-days from purchase
@@ -2795,6 +2831,14 @@ function loadSavedState() {
       // Migrate old saves: give existing consultant a fresh 7-day window
       G.consultantExpiry = G.consultant ? G.gameTime + CONSULTANT_DURATION_DAYS * 1440 : null;
     }
+    if (G.redTeamCoverageBonus === undefined) G.redTeamCoverageBonus = 0;
+    // Migrate vulns from older builds: numeric ids, 'MEDIUM' severity, missing name/cost
+    if (G.vulns) G.vulns.forEach(v => {
+      if (typeof v.id === 'number') v.id = `CVE-2025-${v.id}`;
+      if (v.severity === 'MEDIUM') v.severity = 'MED';
+      if (!v.name) v.name = v.desc || pick(VULN_NAMES);
+      if (!v.cost) v.cost = vulnPatchCost(v.severity);
+    });
     selectedDifficulty = save.selectedDifficulty || 'analyst';
     siemHistory.length = 0;
     siemHistory.push(...(save.siemHistory || []));
@@ -2828,17 +2872,12 @@ function initState() {
   const nodes = NODE_DEFS.map(d => ({
     ...d,
     status: 'healthy',
-    vulns: d.type === 'server' || d.type === 'database' ? rnd(1,4) : rnd(0,2),
     known: true,
   }));
 
-  const vulns = generateVulns(nodes);
-
-  // On APPRENTICE, mark some HIGH vulns pre-patched to reflect lower vuln score
-  if (selectedDifficulty === 'apprentice') {
-    let patched = 0;
-    vulns.forEach(v => { if (v.severity === 'HIGH' && patched < 4) { v.patched = true; v.discovered = true; patched++; } });
-  }
+  // Vuln counts are seeded per difficulty so the starting vuln score lands
+  // near the value advertised on the difficulty screen
+  const vulns = generateVulns(nodes, diff.vulnCounts);
 
   G = {
     budget: diff.budget,
@@ -2851,13 +2890,12 @@ function initState() {
     breachDwellMins: diff.breachDwellMins,
     unhandledBreachMins: diff.unhandledBreachMins,
     mttd: 240,
-    vulnScore: diff.vulnScore,
+    vulnScore: 0, // computed from actual vulns below, once G exists
     gameTime: 0,
     speed: 1,
     paused: false,
     breaches: 0,
     weekBreaches: 0,   // resets each week; used for grade calculation
-    resolvedToday: 0,
     totalResolved: 0,
     gameOver: false,
     won: false,
@@ -2873,7 +2911,7 @@ function initState() {
     consultant: null,       // { id, lastAdviceDay, advice: { priority, action, text } }
     consultantExpiry: null, // gameTime at which engagement expires
     lessonsLearned: {}, // techniqueCategory → count of lessons completed
-    nextThreatIn: 180, // 36s grace period before first threat
+    nextThreatIn: diff.firstThreatDelay || 180, // grace period before first threat
     nextIncomeIn: INCOME_INTERVAL_MINS,
     nextNoiseIn: rndF(20, 60),
     nextThreatId: 1,
@@ -2910,8 +2948,8 @@ function initState() {
     // Vulnerability Scan
     scanJob: null,                // null | { completesAt, slotIdx }
     osintCharges: 0,              // remaining auto-detection charges (max 3)
-    // random events
-    nextRandomEventIn: rndF(1440 * 3, 1440 * 5),
+    // random events — first crisis lands day 2–4, then every 1.5–3 days
+    nextRandomEventIn: rndF(1440 * 1.5, 1440 * 3),
     activeRandomEvents: [],
     // campaign tracking — keyed by actor name
     campaigns: {},
@@ -2931,31 +2969,32 @@ function initState() {
     totalDwellResolved: 0,
     totalIncome: 0,
     cheatCount: 0,
+    // Red team engagements accrue a persistent coverage bonus (capped)
+    redTeamCoverageBonus: 0,
   };
+  G.vulnScore = calcVulnScore();
 }
 
-function generateVulns(nodes) {
-  const severities = ['HIGH','HIGH','MED','MED','LOW'];
-  const vulnNames = [
-    'Remote Code Execution','Privilege Escalation','SQL Injection','Buffer Overflow',
-    'Authentication Bypass','Path Traversal','XXE Injection','Deserialization',
-    'Unpatched OpenSSL','Log4j Variant','SMB Relay','Kerberos Delegation',
-    'Outdated TLS','Default Credentials','Exposed API Key','SSRF'
-  ];
+function generateVulns(nodes, counts) {
+  // counts: { HIGH: n, MED: n, LOW: n } — servers and databases attract more vulns
+  const weighted = [];
+  nodes.forEach(n => {
+    if (n.type === 'internet') return;
+    const w = (n.type === 'server' || n.type === 'database') ? 3 : 1;
+    for (let i = 0; i < w; i++) weighted.push(n);
+  });
   const result = [];
   let id = 1001;
-  nodes.forEach(n => {
-    const count = n.vulns;
+  Object.entries(counts).forEach(([sev, count]) => {
     for (let i = 0; i < count; i++) {
-      const sev = pick(severities);
       result.push({
         id: `CVE-2024-${id++}`,
-        nodeId: n.id,
-        name: pick(vulnNames),
+        nodeId: pick(weighted).id,
+        name: pick(VULN_NAMES),
         severity: sev,
         patched: false,
         discovered: rnd(0,1) === 0, // 50% discovered at start
-        cost: ({HIGH: rnd(8,12), MED: rnd(3,6), LOW: rnd(1,3)}[sev]) * 1000,
+        cost: vulnPatchCost(sev),
       });
     }
   });
@@ -3085,7 +3124,6 @@ let _intelTimeEls = {};               // feedId → time text element ref
 let _incSig = '';                     // structural signature for incident list dirty-check
 let _crtFlickerTimeout = null;        // for cancellation on new game
 let _uiTick = 0;                      // counts updateUI() calls; used to throttle slow renders
-let _intelDisplay = 4;                // cached "X tracked" value; avoids rnd() every frame
 const _ui = {};                       // cached DOM refs — populated by _initUICache() at game start
 
 function siemCategory(source) {
@@ -3203,38 +3241,35 @@ function getIntelVulnBonus() {
 }
 
 function calcVulnScore() {
-  const crits = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'CRIT').length;
-  const highs = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'HIGH').length;
-  const meds  = G.vulns.filter(v => !v.patched && v.severity === 'MEDIUM').length;
-  return Math.min(100, crits * 15 + highs * 8 + meds * 3 + 10);
+  // Attackers don't wait for your scan — ALL unpatched vulns count, discovered
+  // or not. Scanning never raises the score; it only reveals what to patch.
+  const crits = G.vulns.filter(v => !v.patched && v.severity === 'CRIT').length;
+  const highs = G.vulns.filter(v => !v.patched && v.severity === 'HIGH').length;
+  const meds  = G.vulns.filter(v => !v.patched && v.severity === 'MED').length;
+  return Math.min(100, crits * 15 + highs * 7 + meds * 2 + 10);
 }
 
-function generateWeek2Vulns(count) {
-  return generateWeekVulns(count, 2);
+// Vuln score after intel-feed and consultant reductions — used for display AND
+// the threat spawn rate, so those bonuses have a real defensive effect
+function effectiveVulnScore() {
+  return Math.max(0, G.vulnScore - getIntelVulnBonus() - getConsultantBonuses().vulnBonus);
 }
 
 function generateWeekVulns(count, week) {
-  const nodeIds = G.nodes.map(n => n.id);
-  const descs = [
-    'CVE disclosure — remote code execution vector',
-    'New misconfig exposure identified',
-    'Supply chain dependency vulnerability',
-    'Privilege escalation path discovered',
-    'Unpatched service exposure',
-    'Authentication bypass in legacy component',
-    'Zero-day exploit published for in-use component',
-    'Lateral movement path via misconfigured trust',
-    'Credential exposure in leaked configuration file',
-  ];
+  const nodeIds = G.nodes.filter(n => n.type !== 'internet').map(n => n.id);
   const critChance = week >= 4 ? 0.45 : week >= 3 ? 0.35 : 0.25;
-  return Array.from({ length: count }, () => ({
-    id: G.nextVulnId++,
-    nodeId: pick(nodeIds),
-    severity: Math.random() < critChance ? 'CRIT' : Math.random() < 0.6 ? 'HIGH' : 'MEDIUM',
-    discovered: false,
-    patched: false,
-    desc: pick(descs),
-  }));
+  return Array.from({ length: count }, () => {
+    const sev = Math.random() < critChance ? 'CRIT' : Math.random() < 0.6 ? 'HIGH' : 'MED';
+    return {
+      id: `CVE-2025-${G.nextVulnId++}`,
+      nodeId: pick(nodeIds),
+      name: pick(VULN_NAMES),
+      severity: sev,
+      patched: false,
+      discovered: false,
+      cost: vulnPatchCost(sev),
+    };
+  });
 }
 
 function calcCoverage() {
@@ -3249,7 +3284,7 @@ function calcCoverage() {
   const eventPenalty = (G.activeRandomEvents || []).reduce((s, e) => s + (e.coveragePenalty || 0), 0);
   const satTier = G.sat ? SAT_TIERS.find(t => t.id === G.sat) : null;
   const satBonus = satTier ? satTier.coverageBonus : 0;
-  return Math.min(95, Math.max(0, G.coverageBase + avgBonus + intelBonus + satBonus + getConsultantBonuses().coverageBonus - eventPenalty));
+  return Math.min(95, Math.max(0, G.coverageBase + avgBonus + intelBonus + satBonus + (G.redTeamCoverageBonus || 0) + getConsultantBonuses().coverageBonus - eventPenalty));
 }
 
 function calcMTTD() {
@@ -3277,7 +3312,9 @@ function getThreatDetectionChance(threat) {
 
 function spawnThreat() {
   const actor = pick(ACTORS);
-  const cat = pick(TECHNIQUE_CATS);
+  // Initial Access is disproportionately common in the wild (~27% of spawns
+  // here) — which also makes SAT's phishing intercept a meaningful defense
+  const cat = Math.random() < 0.2 ? 'Initial Access' : pick(TECHNIQUE_CATS);
 
   // SAT intercepts Initial Access attempts based on tier
   const _satTier = G.sat ? SAT_TIERS.find(t => t.id === G.sat) : null;
@@ -3380,6 +3417,12 @@ function createIncident(threat) {
   }
 }
 
+// Busy = slots working an incident (numeric id). Activity strings (TRAINING,
+// HUNTING, TABLETOP, PATCHING, OSINT) occupy a slot but aren't incident work.
+function recomputeAnalystBusy() {
+  G.analystBusy = G.analystSlots.filter(s => typeof s === 'number').length;
+}
+
 function assignAnalystToIncident(incidentId, silent = false) {
   const inc = G.incidents.find(i => i.id === incidentId);
   if (!inc || inc.analystId !== null) return;
@@ -3391,7 +3434,7 @@ function assignAnalystToIncident(incidentId, silent = false) {
   const slotIdx = G.analystSlots.findIndex(s => s === null);
   if (slotIdx === -1) return;
   G.analystSlots[slotIdx] = incidentId;
-  G.analystBusy++;
+  recomputeAnalystBusy();
   inc.analystId = slotIdx + 1;
   inc.status = 'TRIAGING';
   siemLog('OK', 'SOC-ANALYST', `Analyst ${inc.analystId} assigned to incident #${incidentId} — ${inc.actor}::${inc.technique}`);
@@ -3522,7 +3565,7 @@ function tick() {
   if (G.nextThreatIn <= 0) {
     spawnThreat();
     const dayFactor = Math.min(2, 1 + G.gameTime / (1440 * 4)); // ramp up over 4 game days
-    const vulnFactor = 1 + (G.vulnScore - 50) * 0.01; // score 80 → 1.3× spawns; score 20 → 0.7×
+    const vulnFactor = 1 + (effectiveVulnScore() - 50) * 0.01; // score 80 → 1.3× spawns; score 20 → 0.7×
     const spawnPenalty = (G.activeRandomEvents || []).reduce((s, e) => s + (e.spawnPenalty || 0), 0);
     G.nextThreatIn = rndF(THREAT_SPAWN_MIN_MINS, THREAT_SPAWN_MAX_MINS) / (dayFactor * Math.max(0.5, vulnFactor) * G.spawnMult * (1 + spawnPenalty));
   }
@@ -3533,9 +3576,12 @@ function tick() {
     t.dwell += delta;
     t.progress += t.progressRate * delta * 60; // per minute
 
-    // Late detection for undetected threats
+    // Late detection for undetected threats — MTTD is the real knob here:
+    // detection is an exponential process whose MEAN time equals G.mttd game-minutes.
+    // At base MTTD 240 vs a 480–720 min breach window, an unhandled lurker breaches
+    // ~5–14% of the time; investing in rules/intel feeds pushes that toward zero.
     if (!t.detected && t.dwell > 0) {
-      const lateChance = (G.coverage / 100) * (delta / 10);
+      const lateChance = delta / Math.max(30, G.mttd);
       if (Math.random() < lateChance) {
         t.detected = true;
         const dStr = fmtDwell(t.dwell);
@@ -3547,8 +3593,12 @@ function tick() {
       }
     }
 
-    // Undetected breach — campaign phase 3 threats have halved dwell window
-    const dwellLimit = (t.campaignPhase === 3) ? G.breachDwellMins * 0.5 : G.breachDwellMins;
+    // Undetected breach — campaign phase 3 threats have halved dwell window.
+    // Week 1 ramps in gently: the window is 1.5× on day 1 and 1.25× on day 2,
+    // so an unlucky early lurker doesn't end a run before the program stands up.
+    // Matters most on Engineer/Hunter, where base MTTD sits close to the window.
+    const startupGrace = (G.week === 1 && G.gameTime < 2880) ? (G.gameTime < 1440 ? 1.5 : 1.25) : 1;
+    const dwellLimit = ((t.campaignPhase === 3) ? G.breachDwellMins * 0.5 : G.breachDwellMins) * startupGrace;
     if (!t.detected && t.dwell >= dwellLimit) {
       triggerBreach(t, 'UNDETECTED');
     }
@@ -3559,8 +3609,8 @@ function tick() {
     if (inc.resolved || inc.breachTriggered) return;
     if (inc.status === 'LESSONS_PENDING') {
       if (G.gameTime >= inc.lessonsPendingUntil) {
-        siemLog('WARN', `SOC-A${inc.analystId}`, `LESSONS LEARNED window expired: ${inc.actor}::${inc.technique} — debrief not filed, no bonus`);
-        resolveIncident(inc, false);
+        siemLog('INFO', analystLabel(inc), `Debrief window closed: ${inc.actor}::${inc.technique} — no lesson filed`);
+        finalizeIncident(inc);
       }
       return;
     }
@@ -3589,16 +3639,15 @@ function tick() {
       inc.stageProgress = 0;
       inc.stageIdx++;
       if (inc.stageIdx >= IR_STAGES.length) {
-        // IR complete — wait for analyst to file lessons learned
-        inc.status = 'LESSONS_PENDING';
-        inc.lessonsPendingUntil = G.gameTime + 120; // 2 game hours to file debrief
-        siemLog('OK', `SOC-A${inc.analystId}`, `IR COMPLETE: ${inc.actor}::${inc.technique} — lessons learned window open (2h)`);
+        // IR complete — analyst freed and reward paid immediately;
+        // an optional lessons-learned window opens on the card
+        completeIR(inc);
       } else {
         inc.status = IR_STAGES[inc.stageIdx].name;
-        siemLog('INFO', `SOC-A${inc.analystId}`, `${inc.actor} :: ${inc.technique} → ${inc.status}`);
+        siemLog('INFO', analystLabel(inc), `${inc.actor} :: ${inc.technique} → ${inc.status}`);
         const phaseQuips = { CONTAIN: CONTAIN_QUIPS, ERADICATE: ERADICATE_QUIPS, RECOVER: RESOLVE_QUIPS };
         const quipPool = phaseQuips[inc.status];
-        if (quipPool && Math.random() < 0.3) siemLog('INFO', `SOC-A${inc.analystId}`, pick(quipPool));
+        if (quipPool && Math.random() < 0.3) siemLog('INFO', analystLabel(inc), pick(quipPool));
       }
     }
   });
@@ -3607,7 +3656,7 @@ function tick() {
   if (G.trainingJob && G.gameTime >= G.trainingJob.completesAt) {
     const idx = G.analystSlots.indexOf('TRAINING');
     if (idx !== -1) G.analystSlots[idx] = null;
-    G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+    recomputeAnalystBusy();
     G.analystSpeedBonus = Math.min(0.30, G.analystSpeedBonus + 0.10);
     G.trainingJob = null;
     const pct = Math.round(G.analystSpeedBonus * 100);
@@ -3617,7 +3666,7 @@ function tick() {
   // Threat hunt completion
   if (G.huntJob && G.gameTime >= G.huntJob.completesAt) {
     G.analystSlots[G.huntJob.slotIdx] = null;
-    G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+    recomputeAnalystBusy();
     const undetected = G.threats.filter(t => !t.detected && !t.breachTriggered);
     const findCount = Math.min(undetected.length, rnd(1, 3));
     const found = undetected.slice(0, findCount);
@@ -3634,7 +3683,7 @@ function tick() {
   // Tabletop exercise completion
   if (G.tabletopJob && G.gameTime >= G.tabletopJob.completesAt) {
     G.analystSlots[G.tabletopJob.slotIdx] = null;
-    G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+    recomputeAnalystBusy();
     G.tabletopBonusExpiresAt = G.gameTime + 2880; // +15% IR speed for 48 game-hours
     G.tabletopJob = null;
     siemLog('OK','TABLETOP','Exercise complete — team response procedures rehearsed, IR efficiency +15% for 48h');
@@ -3643,7 +3692,7 @@ function tick() {
   // Patch sprint completion
   if (G.patchJob && G.gameTime >= G.patchJob.completesAt) {
     G.analystSlots[G.patchJob.slotIdx] = null;
-    G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+    recomputeAnalystBusy();
     const lowVulns = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'LOW');
     lowVulns.forEach(v => { v.patched = true; });
     G.vulnScore = calcVulnScore();
@@ -3658,7 +3707,7 @@ function tick() {
   // OSINT / actor profiling completion
   if (G.osintJob && G.gameTime >= G.osintJob.completesAt) {
     G.analystSlots[G.osintJob.slotIdx] = null;
-    G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+    recomputeAnalystBusy();
     G.osintCharges = 3;
     G.osintJob = null;
     siemLog('OK','OSINT','Actor profiling complete — TTPs documented, next 3 threats will be immediately flagged on entry');
@@ -3743,6 +3792,22 @@ function tick() {
   G.redTeamJobs = G.redTeamJobs.filter(j => !j.done || G.gameTime <= (j.suppressExpiresAt || (j.completedAt || 0) + 1440));
   if (G.redTeamJobs.length !== _rtBefore) updateRedTeamJobsUI();
 
+  // Retire breached threats — they're history, not active workload
+  if (G.threats.some(t => t.breachTriggered)) {
+    G.threats = G.threats.filter(t => !t.breachTriggered);
+  }
+
+  // Breached nodes come back online after their recovery window
+  G.nodes.forEach(n => {
+    if (n.status === 'breached' && n.breachedUntil && G.gameTime >= n.breachedUntil) {
+      const stillTargeted = G.incidents.some(i => !i.resolved && !i.breachTriggered && i.targetId === n.id)
+                         || G.threats.some(t => t.detected && !t.breachTriggered && t.targetId === n.id);
+      n.status = stillTargeted ? 'under_attack' : 'healthy';
+      n.breachedUntil = null;
+      siemLog('OK','RECOVERY',`${n.id} rebuilt from clean backups and restored to service`);
+    }
+  });
+
   // Recalculate stats
   G.coverage = calcCoverage();
   G.mttd = calcMTTD();
@@ -3753,13 +3818,6 @@ function tick() {
   if (vulnDay > G.lastVulnDay) {
     G.lastVulnDay = vulnDay;
     const newCount = rnd(1, 3);
-    const vulnNames = [
-      'Remote Code Execution','Privilege Escalation','SQL Injection','Buffer Overflow',
-      'Authentication Bypass','Path Traversal','XXE Injection','Deserialization',
-      'Unpatched OpenSSL','Log4j Variant','SMB Relay','Kerberos Delegation',
-      'Outdated TLS','Default Credentials','Exposed API Key','SSRF',
-      'NTLM Relay','Insecure Deserialization','Open Redirect','XML External Entity',
-    ];
     const sevWeights = ['HIGH','MED','MED','LOW','LOW'];
     const targetNodes = G.nodes.filter(n => n.type !== 'internet');
     for (let i = 0; i < newCount; i++) {
@@ -3767,11 +3825,11 @@ function tick() {
       G.vulns.push({
         id: `CVE-2025-${G.nextVulnId++}`,
         nodeId: pick(targetNodes).id,
-        name: pick(vulnNames),
+        name: pick(VULN_NAMES),
         severity: sev,
         patched: false,
         discovered: false,
-        cost: ({HIGH: rnd(8,12), MED: rnd(3,6), LOW: rnd(1,3)}[sev]) * 1000,
+        cost: vulnPatchCost(sev),
       });
     }
     G.vulnScore = calcVulnScore();
@@ -3782,7 +3840,7 @@ function tick() {
   G.nextRandomEventIn -= delta;
   if (G.nextRandomEventIn <= 0) {
     fireRandomEvent();
-    G.nextRandomEventIn = rndF(1440 * 3, 1440 * 5);
+    G.nextRandomEventIn = rndF(1440 * 1.5, 1440 * 3);
   }
   G.activeRandomEvents = G.activeRandomEvents.filter(e => G.gameTime < e.endsAt);
 
@@ -3811,19 +3869,25 @@ function tick() {
   updateUI();
 }
 
-function resolveIncident(inc, earnReward = true) {
-  inc.resolved = true;
-  inc.status = 'RESOLVED';
+function analystLabel(inc) {
+  return inc.analystId === 0 ? 'MSSP' : `SOC-A${inc.analystId}`;
+}
+
+// IR is operationally complete: free the analyst, pay the bonus, retire the
+// threat, restore the node. The lessons-learned window that follows is a pure
+// optional bonus — nothing is parked or forfeited if it lapses.
+function completeIR(inc) {
+  inc.status = 'LESSONS_PENDING';
+  inc.lessonsPendingUntil = G.gameTime + 120; // 2 game hours to file the debrief
   G.totalResolved++;
   G.totalDwellResolved += Math.floor(inc.dwell || 0);
-  G.resolvedToday++;
   G._dayResolved++;
   soundResolve();
 
   // Free analyst (analystId 0 = MSSP overflow, no slot to free)
   if (inc.analystId !== null && inc.analystId > 0) {
     G.analystSlots[inc.analystId - 1] = null;
-    G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+    recomputeAnalystBusy();
   }
   if (inc.analystId === 0) G.msspOverflowIncId = null;
 
@@ -3831,19 +3895,28 @@ function resolveIncident(inc, earnReward = true) {
   const tIdx = G.threats.findIndex(t => t.id === inc.threatId);
   if (tIdx !== -1) G.threats.splice(tIdx, 1);
 
-  // Restore node
-  const stillAttacked = G.incidents.some(i => !i.resolved && i.targetId === inc.targetId);
-  if (!stillAttacked) getNode(inc.targetId).status = 'healthy';
+  // Restore node (only if nothing else is actively attacking it)
+  const stillAttacked = G.incidents.some(i =>
+    !i.resolved && !i.breachTriggered && i.status !== 'LESSONS_PENDING' &&
+    i.id !== inc.id && i.targetId === inc.targetId);
+  const node = getNode(inc.targetId);
+  if (!stillAttacked && node.status === 'under_attack') node.status = 'healthy';
 
-  siemLog('OK', `SOC-A${inc.analystId}`, `INCIDENT RESOLVED: ${inc.actor}::${inc.technique} on ${inc.targetId}`, `Dwell: ${fmtDwell(inc.dwell)}`);
-  siemLog('INFO', `SOC-A${inc.analystId}`, pick(RESOLVE_QUIPS));
+  siemLog('OK', analystLabel(inc), `IR COMPLETE: ${inc.actor}::${inc.technique} on ${inc.targetId} — incident resolved`, `Dwell: ${fmtDwell(inc.dwell)}`);
+  siemLog('INFO', analystLabel(inc), pick(RESOLVE_QUIPS));
 
-  // Budget reward (not awarded if lessons window expired without filing)
-  if (earnReward) {
-    const reward = rnd(5000, 20000);
-    G.budget += reward;
-    siemLog('OK', 'FINANCE', `Incident bonus credited: +${fmt$(reward)}`);
-  }
+  // Budget reward — scaled by the income decay factor so heavy late-week
+  // incident volume doesn't out-earn the shrinking budget line
+  const rewardScale = G.incomeAmount / DIFFICULTIES[selectedDifficulty].incomeAmount;
+  const reward = Math.max(1000, Math.round(rnd(5000, 20000) * rewardScale / 1000) * 1000);
+  G.budget += reward;
+  G.totalIncome += reward; // keeps the end-card "total spent" math honest
+  siemLog('OK', 'FINANCE', `Incident bonus credited: +${fmt$(reward)}`);
+}
+
+function finalizeIncident(inc) {
+  inc.resolved = true;
+  inc.status = 'RESOLVED';
 }
 
 function completeLessonsLearned(incidentId) {
@@ -3854,15 +3927,14 @@ function completeLessonsLearned(incidentId) {
   const prev = G.lessonsLearned[cat] || 0;
 
   if (prev >= 25) {
-    siemLog('INFO', `SOC-A${inc.analystId}`, `LESSONS LEARNED filed: ${cat} — team already at peak proficiency for this category`);
+    siemLog('INFO', analystLabel(inc), `LESSONS LEARNED filed: ${cat} — team already at peak proficiency for this category`);
   } else {
     G.lessonsLearned[cat] = prev + 1;
     const newBonus = prev + 1;
-    siemLog('OK', `SOC-A${inc.analystId}`, `LESSONS LEARNED: ${cat} — IR speed +${newBonus}% (total ${newBonus}%)`);
+    siemLog('OK', analystLabel(inc), `LESSONS LEARNED: ${cat} — IR speed +${newBonus}% (total ${newBonus}%)`);
   }
 
-  // Now fully resolve
-  resolveIncident(inc);
+  finalizeIncident(inc);
 }
 
 function triggerBreach(threat, reason, incident) {
@@ -3877,13 +3949,24 @@ function triggerBreach(threat, reason, incident) {
   const actorName = threat ? threat.actor : (incident ? incident.actor : 'UNKNOWN');
 
   if (threat) threat.breachTriggered = true;
-  if (incident) { incident.breachTriggered = true; incident.status = 'BREACHED'; }
+  if (incident) {
+    incident.breachTriggered = true;
+    incident.status = 'BREACHED';
+    // Retire the underlying threat too — otherwise it lingers forever,
+    // inflating the active-threat count
+    const linked = G.threats.find(t => t.id === incident.threatId);
+    if (linked) linked.breachTriggered = true;
+  }
 
-  getNode(target).status = 'breached';
+  const nodeDef = NODE_DEFS.find(n => n.id === target);
+  const node = getNode(target);
+  node.status = 'breached';
+  // Node recovers to service once the breach effect window has passed
+  node.breachedUntil = G.gameTime +
+    ((nodeDef && nodeDef.breachEffect && nodeDef.breachEffect.duration > 0) ? nodeDef.breachEffect.duration : 2880);
   siemLog('CRIT', 'BREACH', `CONFIRMED BREACH: ${actorName} has compromised ${target} [${reason}]`, `Breach count: ${G.breaches}/${MAX_BREACHES}`);
 
   // Node-specific breach consequences
-  const nodeDef = NODE_DEFS.find(n => n.id === target);
   if (nodeDef && nodeDef.breachEffect) {
     const eff = nodeDef.breachEffect;
     if (eff.budget) {
@@ -3929,8 +4012,12 @@ function computeFinalScore() {
     ? Math.round((G.totalDwellResolved || 0) / G.totalResolved) : 0;
   const coverage       = G.coverage;
   const unknownVulns   = G.vulns.filter(v => !v.discovered).length;
-  const unpatchedVulns = G.vulns.filter(v => v.discovered && !v.patched).length;
-  const openIncidents  = G.incidents.filter(i => i.status !== 'RESOLVED').length;
+  // All unpatched vulns count against the grade — you can't ignore what you haven't scanned
+  const unpatchedVulns = G.vulns.filter(v => !v.patched).length;
+  // Breached incidents are permanent history and lessons-pending ones are operationally
+  // closed — neither should count as "open" work against the grade
+  const openIncidents  = G.incidents.filter(i =>
+    !i.resolved && !i.breachTriggered && i.status !== 'LESSONS_PENDING').length;
   // Grade: breach-first floor, posture-based for 0-breach runs
   let grade, label;
   if (G.weekBreaches >= MAX_BREACHES) {
@@ -3939,9 +4026,9 @@ function computeFinalScore() {
     grade = 'D'; label = 'BADLY COMPROMISED';
   } else if (G.weekBreaches === 1) {
     grade = 'C'; label = 'BREACH ABSORBED';
-  } else if (coverage >= 75 && mttdMins <= 60 && unpatchedVulns <= 2 && openIncidents <= 2) {
+  } else if (coverage >= 75 && mttdMins <= 60 && unpatchedVulns <= 3 && openIncidents <= 2) {
     grade = 'S'; label = 'EXCEPTIONAL POSTURE';
-  } else if (coverage >= 50 && mttdMins <= 120 && unpatchedVulns <= 5 && openIncidents <= 5) {
+  } else if (coverage >= 50 && mttdMins <= 120 && unpatchedVulns <= 8 && openIncidents <= 5) {
     grade = 'A'; label = 'STRONG POSTURE';
   } else {
     grade = 'B'; label = 'FUNCTIONAL DEFENSE';
@@ -4001,6 +4088,10 @@ function buildScoreCardHTML(s) {
 
 function startBreachDeathSequence(reason) {
   G.breachDying = true;
+  // Lock in the loss immediately: flag game over and clear the autosave so
+  // closing the tab mid-sequence can't resurrect the run at 3/3 breaches
+  G.gameOver = true;
+  clearSavedState();
   const DEATH_MS = 15000;
   const start = performance.now();
 
@@ -4143,11 +4234,15 @@ function continueToNextWeek() {
   const budgetFactor = G.week >= 4 ? 0.75 : G.week >= 3 ? 0.80 : 0.85;
   G.incomeAmount = Math.floor(G.incomeAmount * budgetFactor);
 
-  // Escalated adversary activity
-  G.spawnMult *= 1.25;
+  // Escalated adversary activity — ×1.15/week keeps week 4 demanding but
+  // inside the throughput ceiling of a well-built 8-analyst SOC
+  G.spawnMult *= 1.15;
 
   // Fresh threat actor wave
   G.campaigns = {};
+
+  // Trim closed history so the save doesn't grow unboundedly across weeks
+  G.incidents = G.incidents.filter(i => !i.resolved && !i.breachTriggered);
 
   // New CVE disclosures — more and higher severity each week
   const vulnCount = G.week >= 4 ? 9 : G.week >= 3 ? 7 : 6;
@@ -4236,14 +4331,14 @@ function patchVuln(id) {
 }
 
 function patchCritical() {
-  const crits = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'HIGH');
+  const crits = G.vulns.filter(v => v.discovered && !v.patched && (v.severity === 'CRIT' || v.severity === 'HIGH'));
   const cost = vulnBulkCost(crits);
   if (G.budget < cost) { siemLog('WARN','OPS','Insufficient budget for critical patch cycle'); return; }
   G.budget -= cost;
   crits.forEach(v => v.patched = true);
   const oldScore = G.vulnScore;
   G.vulnScore = calcVulnScore();
-  siemLog('OK','VULN-MGMT',`Critical patch cycle complete — ${crits.length} HIGH vulns patched (${fmt$(cost)}, 15% bulk discount)`, `Score: ${oldScore} → ${G.vulnScore}`);
+  siemLog('OK','VULN-MGMT',`Critical patch cycle complete — ${crits.length} CRIT/HIGH vulns patched (${fmt$(cost)}, 15% bulk discount)`, `Score: ${oldScore} → ${G.vulnScore}`);
   renderVulnModal();
 }
 
@@ -4302,7 +4397,7 @@ function startTraining() {
   if (G.budget < 50000) { siemLog('WARN','HR','Insufficient budget for analyst training'); return; }
   G.budget -= 50000;
   G.analystSlots[freeIdx] = 'TRAINING';
-  G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+  recomputeAnalystBusy();
   G.trainingJob = { completesAt: G.gameTime + 1440 };
   siemLog('OK','HR','Analyst dispatched to training — team capacity reduced for 24h');
 }
@@ -4315,7 +4410,7 @@ function startHunt() {
   if (G.budget < 60000) { siemLog('WARN','HR','Insufficient budget for threat hunt'); return; }
   G.budget -= 60000;
   G.analystSlots[freeIdx] = 'HUNTING';
-  G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+  recomputeAnalystBusy();
   G.huntJob = { completesAt: G.gameTime + 720, slotIdx: freeIdx };
   siemLog('OK','HUNT','Analyst deployed on threat hunt — active sweep of environment underway');
 }
@@ -4328,7 +4423,7 @@ function startTabletop() {
   if (G.budget < 25000) { siemLog('WARN','HR','Insufficient budget for tabletop exercise'); return; }
   G.budget -= 25000;
   G.analystSlots[freeIdx] = 'TABLETOP';
-  G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+  recomputeAnalystBusy();
   G.tabletopJob = { completesAt: G.gameTime + 480, slotIdx: freeIdx };
   siemLog('OK','HR','Tabletop exercise underway — IR team rehearsing response procedures');
 }
@@ -4343,7 +4438,7 @@ function startPatchSprint() {
   if (lowVulns.length === 0) { siemLog('INFO','VULN','No low-severity vulnerabilities to remediate'); return; }
   G.budget -= 25000;
   G.analystSlots[freeIdx] = 'PATCHING';
-  G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+  recomputeAnalystBusy();
   G.patchJob = { completesAt: G.gameTime + 480, slotIdx: freeIdx };
   siemLog('OK','VULN',`Patch sprint initiated — analyst remediating ${lowVulns.length} low-severity vulnerability${lowVulns.length > 1 ? 's' : ''}`);
 }
@@ -4356,7 +4451,7 @@ function startOSINT() {
   if (G.budget < 40000) { siemLog('WARN','HR','Insufficient budget for OSINT research'); return; }
   G.budget -= 40000;
   G.analystSlots[freeIdx] = 'OSINT';
-  G.analystBusy = G.analystSlots.filter(s => s !== null && s !== 'TRAINING' && s !== 'HUNTING' && s !== 'TABLETOP' && s !== 'PATCHING' && s !== 'OSINT').length;
+  recomputeAnalystBusy();
   G.osintJob = { completesAt: G.gameTime + 720, slotIdx: freeIdx };
   siemLog('OK','OSINT','Analyst profiling active threat actors — TTP research underway');
 }
@@ -4441,8 +4536,10 @@ function fireRandomEvent() {
   const ev = pick(RANDOM_EVENTS);
   siemLog(ev.sev, 'THREAT-INTEL', `⚠ RANDOM EVENT: ${ev.name} — ${ev.msg}`);
   if (ev.budgetHit) {
-    G.budget = Math.max(0, G.budget - ev.budgetHit);
-    siemLog('WARN','FINANCE',`Emergency funds seized: -${fmt$(ev.budgetHit)}`);
+    // Seizure scales with reserves — a flat $20k is noise against a $500k budget
+    const hit = Math.max(ev.budgetHit, Math.round(G.budget * 0.1 / 1000) * 1000);
+    G.budget = Math.max(0, G.budget - hit);
+    siemLog('WARN','FINANCE',`Emergency funds seized: -${fmt$(hit)}`);
   }
   if (ev.spawnSkill5) {
     // Spawn a high-skill threat immediately
@@ -4523,21 +4620,28 @@ function launchRedTeam() {
 function completeRedTeam(job) {
   const detGap = rnd(1, 3);
   const vulnsFound = rnd(1, 4);
-  // Improve coverage slightly
-  G.coverage = Math.min(95, G.coverage + detGap * 2);
+  // Persistent coverage gain — stored separately so calcCoverage() doesn't wipe it
+  const covGain = detGap * 2;
+  G.redTeamCoverageBonus = Math.min(10, (G.redTeamCoverageBonus || 0) + covGain);
+  G.coverage = calcCoverage();
   // Discover hidden vulns (and auto-scan — red teamers document what they find)
   let discovered = 0;
   G.vulns.filter(v => !v.discovered).slice(0, vulnsFound).forEach(v => { v.discovered = true; discovered++; });
-  // Spawn suppression: red team findings suppress one technique category for 48 game hours
-  const suppressCat = pick(TECHNIQUE_CATS);
-  const expiresAt = G.gameTime + 2880; // 48 game hours
+  // Spawn suppression tied to the engagement type; the full red team targets
+  // whichever category has your weakest detection rules
+  const opt = REDTEAM_OPTIONS.find(o => o.id === job.type);
+  const suppressCat = (opt && opt.suppressPool)
+    ? pick(opt.suppressPool)
+    : TECHNIQUE_CATS.slice().sort((a,b) => (G.rules[a]||0) - (G.rules[b]||0))[0];
+  const suppressMins = (opt && opt.suppressDuration) || 2880;
+  const expiresAt = G.gameTime + suppressMins;
   G.suppressedTechniques = G.suppressedTechniques.filter(s => s.category !== suppressCat);
   G.suppressedTechniques.push({ category: suppressCat, expiresAt });
   job.suppressCat = suppressCat;
   job.suppressExpiresAt = expiresAt;
   siemLog('OK','RED-TEAM',`ENGAGEMENT COMPLETE: ${job.name}`);
-  siemLog('WARN','RED-TEAM',`Findings: ${detGap} detection gaps, ${discovered} new vulns, 1 suppression window`);
-  siemLog('INFO','RED-TEAM',`${suppressCat} threat actors suppressed for 48h — IOCs distributed to sensors`);
+  siemLog('WARN','RED-TEAM',`Findings: ${detGap} detection gaps closed (+${covGain}% coverage), ${discovered} new vulns, 1 suppression window`);
+  siemLog('INFO','RED-TEAM',`${suppressCat} threat actors suppressed for ${Math.round(suppressMins/60)}h — IOCs distributed to sensors`);
   document.getElementById('redteam-jobs-section').style.display = '';
   updateRedTeamJobsUI();
 }
@@ -4623,7 +4727,7 @@ function generateConsultantAdvice() {
 
   // Default: posture is reasonable
   const t2 = fmtTime(G.gameTime);
-  const daysLeft = WIN_DAYS - t2.day + 1;
+  const daysLeft = WIN_DAYS * G.week - t2.day + 1;
   return {
     priority: 'LOW',
     action: null,
@@ -4683,6 +4787,7 @@ function _initUICache() {
   ];
   ids.forEach(id => { _ui[id] = document.getElementById(id); });
   _incSig = '';
+  initNetmap();
 }
 
 // ================================================================
@@ -4793,7 +4898,7 @@ function updateUI() {
   _ui['stat-mttr'].textContent = mttr > 0 ? `${mttr} min` : '—';
   _ui['stat-mttr'].classList.toggle('warn', mttr > 120);
 
-  const vs = Math.max(0, G.vulnScore - getIntelVulnBonus());
+  const vs = effectiveVulnScore();
   _ui['stat-vuln'].textContent = vs;
   _ui['stat-vuln'].className = `stat-val${vs > 60 ? ' crit' : vs > 40 ? ' warn' : ''}`;
   _ui['bar-vuln'].style.width = `${vs}%`;
@@ -4895,7 +5000,9 @@ function updateUI() {
   if (slow) {
     renderAnalystRoster();
     updateTabBadge();
+    renderNetmapStates();
   }
+  renderNetmapPackets();
 
   // SAT btn — always opens modal; cost shows cheapest entry or renewal
   const satBtn = _ui['sat-btn'];
@@ -5034,6 +5141,7 @@ function buildTooltips() {
     if (avgRuleBonus > 0)  parts.push(`Rules: +${Math.round(avgRuleBonus)}%`);
     if (intelBonus > 0)    parts.push(`Intel: +${intelBonus}%`);
     if (satBonus > 0)      parts.push(`SAT: +${satBonus}%`);
+    if (G.redTeamCoverageBonus > 0) parts.push(`Red Team: +${G.redTeamCoverageBonus}%`);
     if (consultBonus > 0)  parts.push(`Consultant: +${consultBonus}%`);
     if (eventPenalty > 0)  parts.push(`Events: -${eventPenalty}%`);
     parts.push(`Net: ${Math.round(G.coverage)}%`);
@@ -5056,19 +5164,20 @@ function buildTooltips() {
     parts.push(`Net: ${Math.round(G.mttd)}min`);
     if (_ui['tip-mttd']) _ui['tip-mttd'].title = parts.join(' \u2502 ');
   }
-  // VULN SCORE breakdown
+  // VULN SCORE breakdown (all unpatched vulns count \u2014 discovered or not)
   {
-    const crits = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'CRIT').length;
-    const highs = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'HIGH').length;
-    const meds  = G.vulns.filter(v => !v.patched && v.severity === 'MEDIUM').length;
+    const crits = G.vulns.filter(v => !v.patched && v.severity === 'CRIT').length;
+    const highs = G.vulns.filter(v => !v.patched && v.severity === 'HIGH').length;
+    const meds  = G.vulns.filter(v => !v.patched && v.severity === 'MED').length;
     const intelVulnBonus = getIntelVulnBonus();
-    const raw = crits * 15 + highs * 8 + meds * 3 + 10;
+    const consultVulnBonus = getConsultantBonuses().vulnBonus;
     const parts = ['Base: 10'];
     if (crits > 0) parts.push(`CRIT: +${crits * 15} (${crits}\u00d715)`);
-    if (highs > 0) parts.push(`HIGH: +${highs * 8} (${highs}\u00d78)`);
-    if (meds > 0)  parts.push(`MED: +${meds * 3} (${meds}\u00d73)`);
+    if (highs > 0) parts.push(`HIGH: +${highs * 7} (${highs}\u00d77)`);
+    if (meds > 0)  parts.push(`MED: +${meds * 2} (${meds}\u00d72)`);
     if (intelVulnBonus > 0) parts.push(`Intel: -${intelVulnBonus}`);
-    parts.push(`Net: ${Math.round(Math.max(0, Math.min(100, raw) - intelVulnBonus))}`);
+    if (consultVulnBonus > 0) parts.push(`Consultant: -${consultVulnBonus}`);
+    parts.push(`Net: ${effectiveVulnScore()}`);
     if (_ui['tip-vuln']) _ui['tip-vuln'].title = parts.join(' \u2502 ');
   }
   // MTTR breakdown
@@ -5500,6 +5609,162 @@ function updateActiveEventsUI() {
 }
 
 // ================================================================
+// NETWORK MINIMAP
+// ================================================================
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const NETMAP_LINKS = [
+  ['INET','FW-01'], ['INET','FW-02'],
+  ['FW-01','WEB-01'], ['FW-01','WEB-02'], ['FW-02','CLOUD-01'], ['FW-02','CLOUD-02'],
+  ['WEB-01','CORE-SW'], ['WEB-02','CORE-SW'], ['CLOUD-01','CORE-SW'], ['CLOUD-02','CORE-SW'],
+  ['CORE-SW','AD-01'], ['CORE-SW','DB-01'], ['CORE-SW','DB-02'],
+  ['AD-01','WORK-01'], ['DB-01','WORK-02'], ['DB-02','WORK-03'],
+];
+let _netmapNodeEls = {};
+let _netmapPacketEls = {};
+
+// Adjacency + shortest-path cache: packets must travel the drawn links,
+// hop by hop — a packet cutting straight across layers is misinformation.
+const _netmapAdj = {};
+NETMAP_LINKS.forEach(([a, b]) => {
+  (_netmapAdj[a] = _netmapAdj[a] || []).push(b);
+  (_netmapAdj[b] = _netmapAdj[b] || []).push(a);
+});
+const _netmapPathCache = {};
+
+function netmapPath(fromId, toId) {
+  const key = `${fromId}>${toId}`;
+  if (_netmapPathCache[key]) return _netmapPathCache[key];
+  // BFS for the shortest route through the topology
+  const prev = { [fromId]: null };
+  const queue = [fromId];
+  while (queue.length) {
+    const cur = queue.shift();
+    if (cur === toId) break;
+    (_netmapAdj[cur] || []).forEach(n => {
+      if (!(n in prev)) { prev[n] = cur; queue.push(n); }
+    });
+  }
+  let ids = [];
+  if (toId in prev) {
+    for (let n = toId; n !== null; n = prev[n]) ids.unshift(n);
+  } else {
+    ids = [fromId]; // unreachable (e.g. insider: entry === target) — sit on the node
+  }
+  const pts = ids.map(id => NODE_DEFS.find(n => n.id === id)).filter(Boolean);
+  const segs = [];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const len = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    segs.push({ a: pts[i - 1], b: pts[i], start: total, len });
+    total += len;
+  }
+  const path = { pts, segs, total };
+  _netmapPathCache[key] = path;
+  return path;
+}
+
+function netmapPointAt(path, frac) {
+  if (path.total === 0 || path.segs.length === 0) {
+    const p = path.pts[0] || NODE_DEFS[0];
+    return { x: p.x, y: p.y };
+  }
+  const d = frac * path.total;
+  const seg = path.segs.find(s => d <= s.start + s.len) || path.segs[path.segs.length - 1];
+  const t = seg.len ? (d - seg.start) / seg.len : 0;
+  return { x: seg.a.x + (seg.b.x - seg.a.x) * t, y: seg.a.y + (seg.b.y - seg.a.y) * t };
+}
+
+function initNetmap() {
+  const svg = document.getElementById('netmap');
+  if (!svg) return;
+  svg.innerHTML = '';
+  _netmapNodeEls = {};
+  _netmapPacketEls = {};
+  const linkLayer = document.createElementNS(SVG_NS, 'g');
+  NETMAP_LINKS.forEach(([a, b]) => {
+    const na = NODE_DEFS.find(n => n.id === a), nb = NODE_DEFS.find(n => n.id === b);
+    if (!na || !nb) return;
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.setAttribute('x1', na.x); line.setAttribute('y1', na.y);
+    line.setAttribute('x2', nb.x); line.setAttribute('y2', nb.y);
+    line.setAttribute('class', 'nm-link');
+    linkLayer.appendChild(line);
+  });
+  svg.appendChild(linkLayer);
+  NODE_DEFS.forEach(d => {
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'nm-node');
+    const w = 38, h = 13;
+    const rect = document.createElementNS(SVG_NS, 'rect');
+    rect.setAttribute('x', d.x - w / 2); rect.setAttribute('y', d.y - h / 2);
+    rect.setAttribute('width', w); rect.setAttribute('height', h);
+    rect.setAttribute('rx', 2);
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('x', d.x); text.setAttribute('y', d.y + 2);
+    text.setAttribute('text-anchor', 'middle');
+    text.textContent = d.label;
+    const title = document.createElementNS(SVG_NS, 'title');
+    g.appendChild(rect); g.appendChild(text); g.appendChild(title);
+    svg.appendChild(g);
+    _netmapNodeEls[d.id] = { g, title };
+  });
+  // Packets render above nodes
+  const packetLayer = document.createElementNS(SVG_NS, 'g');
+  packetLayer.id = 'netmap-packets';
+  svg.appendChild(packetLayer);
+}
+
+// Node colors are derived from live state rather than the status field, so the
+// map self-heals: green = healthy, amber = discovered unpatched vulns,
+// red pulse = under attack, solid red = breached.
+function renderNetmapStates() {
+  if (!G) return;
+  G.nodes.forEach(n => {
+    const el = _netmapNodeEls[n.id];
+    if (!el) return;
+    let state = 'healthy';
+    if (n.status === 'breached') state = 'breached';
+    else if (G.incidents.some(i => !i.resolved && !i.breachTriggered && i.status !== 'LESSONS_PENDING' && i.targetId === n.id)
+          || G.threats.some(t => t.detected && !t.breachTriggered && t.targetId === n.id)) state = 'attack';
+    else if (G.vulns.some(v => v.nodeId === n.id && v.discovered && !v.patched)) state = 'vulnerable';
+    const cls = state === 'healthy' ? 'nm-node' : `nm-node ${state}`;
+    if (el.g.getAttribute('class') !== cls) el.g.setAttribute('class', cls);
+    const vulnCount = G.vulns.filter(v => v.nodeId === n.id && v.discovered && !v.patched).length;
+    const tip = `${n.id} — ${state === 'attack' ? 'UNDER ATTACK' : state.toUpperCase()}${vulnCount ? ` | ${vulnCount} unpatched vuln${vulnCount > 1 ? 's' : ''}` : ''}`;
+    if (el.title.textContent !== tip) el.title.textContent = tip;
+  });
+}
+
+// Animated packets: one red dot per detected active threat, moving along the
+// entry→target line. Undetected threats stay invisible — no free intel.
+function renderNetmapPackets() {
+  const layer = document.getElementById('netmap-packets');
+  if (!layer || !G) return;
+  const seen = new Set();
+  G.threats.forEach(t => {
+    if (!t.detected || t.breachTriggered) return;
+    seen.add(t.id);
+    let dot = _netmapPacketEls[t.id];
+    if (!dot) {
+      dot = document.createElementNS(SVG_NS, 'circle');
+      dot.setAttribute('r', 2);
+      dot.setAttribute('class', 'nm-packet');
+      layer.appendChild(dot);
+      _netmapPacketEls[t.id] = dot;
+    }
+    const path = netmapPath(t.entryId, t.targetId);
+    const frac = ((t.progress || 0) * 0.4) % 1; // ~4s per traversal at 1×
+    const pos = netmapPointAt(path, frac);
+    dot.setAttribute('cx', pos.x.toFixed(1));
+    dot.setAttribute('cy', pos.y.toFixed(1));
+  });
+  Object.keys(_netmapPacketEls).forEach(id => {
+    if (!seen.has(Number(id))) { _netmapPacketEls[id].remove(); delete _netmapPacketEls[id]; }
+  });
+}
+
+// ================================================================
 // MODAL RENDERING
 // ================================================================
 
@@ -5600,9 +5865,9 @@ function renderVulnModal() {
     vulnList.innerHTML = '<div style="color:var(--green-dark);font-size:10px;padding:8px">No vulnerabilities discovered. Run a scan.</div>';
   } else {
     known.sort((a,b) => {
-      const sev = {HIGH:0,MED:1,LOW:2};
+      const sev = {CRIT:0,HIGH:1,MED:2,LOW:3};
       if (a.patched !== b.patched) return a.patched ? 1 : -1;
-      return sev[a.severity] - sev[b.severity];
+      return (sev[a.severity] ?? 4) - (sev[b.severity] ?? 4);
     }).forEach(v => {
       const cost = v.cost || 5000;
       const canAfford = G.budget >= cost;
@@ -5623,7 +5888,7 @@ function renderVulnModal() {
   }
   // Update bulk button labels and states
   const unknown = G.vulns.filter(v=>!v.discovered).length;
-  const crits = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'HIGH');
+  const crits = G.vulns.filter(v => v.discovered && !v.patched && (v.severity === 'CRIT' || v.severity === 'HIGH'));
   const allUnpatched = G.vulns.filter(v => v.discovered && !v.patched);
   const critCost = vulnBulkCost(crits);
   const allCost  = vulnBulkCost(allUnpatched);
@@ -5950,7 +6215,7 @@ document.addEventListener('keydown', e => {
     if (e.key === '4') setSpeed(4);
   }
   const onGameScreen = document.getElementById('game-screen').classList.contains('visible');
-  if (onGameScreen && e.key === '?') openHelp();
+  if (onGameScreen && e.key === '?' && !modalBlocked) openHelp();
   // M — only fire when game screen is active; prevents accidental mute on difficulty/boot screens
   if (onGameScreen && (e.key === 'm' || e.key === 'M') && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) toggleMute();
 });
@@ -6082,6 +6347,8 @@ function restartGame() {
   siemEntryCount = 0;
   selectedRedTeam = null;
   selectedConsultant = null;
+  selectedMSSPTier = null;
+  selectedSATTier = null;
   consultantBriefingCollapsed = false;
   // Close any open modals
   document.querySelectorAll('.modal-overlay.visible').forEach(m => m.classList.remove('visible'));
@@ -6145,7 +6412,7 @@ function startDemoMode() {
   // Override the diff-badge to show DEMO
   const badge = document.getElementById('diff-badge');
   badge.textContent = '// DEMO';
-  ['analyst', 'apprentice', 'ciso'].forEach(c => badge.classList.remove(c));
+  ['analyst', 'apprentice', 'adversary'].forEach(c => badge.classList.remove(c));
   badge.classList.add('demo-mode-badge');
   // Autopilot fires every 3 real-seconds
   if (_demoPilotInterval) clearInterval(_demoPilotInterval);
@@ -6253,7 +6520,7 @@ const BOOT_LINES = [
   ['INIT', 'ok',   'Establishing secure comms to internal nodes'],
   ['WARN', 'warn', '3 critical vulnerabilities in company infrastructure'],
   ['WARN', 'warn', 'Threat actor activity detected — EMEA region'],
-  ['WARN', 'warn', `Detection coverage at 25% — below acceptable threshold`],
+  ['WARN', 'warn', `Detection coverage below acceptable threshold`],
   ['BOOT', 'ok',   'All systems operational — awaiting analyst'],
   ['INFO', 'ok',   'Press [?] at any time for operational brief'],
 ];
@@ -6271,7 +6538,6 @@ function runBootSequence() {
           _initUICache();
           setSpeed(1);
           _uiTick = 0;
-          _intelDisplay = rnd(3, 6);
           const diff = DIFFICULTIES[selectedDifficulty];
           const badge = document.getElementById('diff-badge');
           badge.textContent = diff.label;
@@ -6334,7 +6600,6 @@ function openDifficultyScreen(e) {
     _initUICache();
     setSpeed(1);
     _uiTick = 0;
-    _intelDisplay = rnd(3, 6);
     const diff = DIFFICULTIES[selectedDifficulty];
     const badge = document.getElementById('diff-badge');
     badge.textContent = diff.label;
@@ -6421,7 +6686,6 @@ function startGame() {
 
   // Reset per-session render state
   _uiTick = 0;
-  _intelDisplay = rnd(3, 6);
 
   // Set difficulty badge
   const badge = document.getElementById('diff-badge');

@@ -28,7 +28,7 @@ You run a global SOC. Threats spawn continuously — your job is to detect, resp
 2. Detected threats create **incidents** in the centre panel — assign an analyst to start IR.
 3. Undetected threats silently dwell and breach after a difficulty-dependent window.
 4. Unhandled incidents also breach if left unassigned too long.
-5. A **Lessons Learned** prompt appears after each resolved incident — click it for a +1% IR speed bonus per technique category (stacks up to +25%). It expires after ~2 game hours.
+5. When IR completes, the analyst is freed and the incident bonus paid immediately. A **Lessons Learned** prompt lingers for ~2 game hours — click it for an optional +1% IR speed bonus per technique category (stacks up to +25%). Skipping it costs nothing.
 6. Analysts work incidents through four IR stages: **TRIAGE → CONTAIN → ERADICATE → RECOVER**.
 
 ### Difficulty
@@ -46,7 +46,7 @@ You run a global SOC. Threats spawn continuously — your job is to detect, resp
 | Undetected breach window | ~2.4 min | ~2 min | ~1.6 min |
 | Unhandled breach window | ~4.8 min | ~4 min | ~3.2 min |
 
-Times are at 1× speed. On Hunter, 90% of threats spawn undetected — invest in Detection Engineering immediately and hire a second analyst before the backlog builds.
+Times are at 1× speed. During week 1 the undetected breach window is extended (×1.5 on day 1, ×1.25 on day 2) so an unlucky early lurker can't end a run before your program stands up; full pressure applies from day 3. On Hunter, 90% of threats spawn undetected — invest in Detection Engineering immediately and hire a second analyst before the backlog builds.
 
 ### Capabilities
 
@@ -58,8 +58,8 @@ These require a free analyst and budget:
 |---|---|---|
 | **Hire Analyst** | $75k | Add a responder (max 8) — each handles one incident at a time |
 | **Send to Training** | $50k | Takes an analyst offline for 24 game hours; permanently boosts all analyst IR speed by 10% (max +30%) |
-| **Threat Hunt** | $60k | Sends an analyst to proactively search for hidden threats (4 game hours) |
-| **Tabletop Exercise** | $25k | Runs a scenario exercise — +15% IR speed bonus for 2 game hours |
+| **Threat Hunt** | $60k | Sends an analyst to proactively search for hidden threats (12 game hours) |
+| **Tabletop Exercise** | $25k | Runs an 8-hour scenario exercise — +15% IR speed bonus for 48 game hours |
 | **Patch Sprint** | $25k | Analyst remediates all LOW-severity vulnerabilities |
 | **OSINT Research** | $40k | 12 game hours of open-source intel gathering — loads 3 charges for guaranteed threat detection |
 
@@ -68,7 +68,7 @@ These require a free analyst and budget:
 | Action | Cost | Effect |
 |---|---|---|
 | **Detection Eng** | $25k–$50k | Upgrade SIEM rules per ATT&CK category — +5% Coverage per level, 5 levels max per category. Cost scales with level. |
-| **Vuln Mgmt** | $15k scan | Scan infrastructure to discover vulnerabilities, then patch individually by severity (CRIT/HIGH/MED/LOW). Lowers Vuln Score and reduces threat spawn rate. |
+| **Vuln Mgmt** | $15k scan | Scan infrastructure to discover vulnerabilities, then patch individually by severity (CRIT/HIGH/MED/LOW). Every unpatched vuln counts toward Vuln Score — even undiscovered ones — and Vuln Score drives threat spawn rate. |
 | **SOAR Platform** | $100k + $20k/playbook | Deploys automation playbooks that accelerate TRIAGE and CONTAIN stages (+25–50% speed). 12 playbooks available. |
 | **Threat Intel** | $30k–$190k | Subscribe to intel feeds for passive Coverage and MTTD boosts. Each feed lasts 7 game days. |
 
@@ -76,14 +76,14 @@ These require a free analyst and budget:
 
 | Action | Cost | Effect |
 |---|---|---|
-| **Red Team** | $30k–$150k | Commission engagements (network pentest, phishing sim, internal assessment, cloud review, full red team). Suppresses attack categories and discovers hidden vulnerabilities. |
+| **Red Team** | $30k–$150k | Commission engagements (network pentest, phishing sim, internal assessment, cloud review, full red team). Permanently closes detection gaps (+2–6% coverage, capped +10%), discovers hidden vulnerabilities, and suppresses an attack category matched to the engagement type for 48–72h. |
 | **Security Awareness** | $20k–$100k | Train staff in phishing resistance across 3 tiers (Phishing Sim, Awareness Program, Human Risk Mgmt). Blocks social engineering attacks and raises Coverage. |
-| **MSSP** | $100k–$350k startup | Outsource SOC operations across 3 tiers: Alert Monitoring (auto-assign), Co-Managed (+ lessons learned + 10% IR), Fully Managed (+ overflow capacity + 15% IR). Renewal fees per income cycle. |
+| **MSSP** | $100k–$350k startup | Outsource SOC operations across 3 tiers: Alert Monitoring (auto-assign), Co-Managed (+ lessons learned + 10% IR), Fully Managed (+ overflow capacity + 15% IR). Contracts run 7 game days; renewals are cheaper than the startup fee. |
 | **Consultant** | $75k | Retains an expert for 7 game days — provides daily prioritised recommendations and passive defensive bonuses |
 
 ### Random Events
 
-Periodically the game throws a crisis: DDoS barrages, tool outages, zero-days, insider threats, and emergency budget audits. Active crises appear in the left panel and may temporarily penalise Coverage % or drain budget.
+Every 1.5–3 game days the game throws a crisis: DDoS barrages, tool outages, zero-days, insider threats, and emergency budget audits (which seize 10% of your reserves, minimum $20k). Active crises appear in the left panel and may temporarily penalise Coverage % or drain budget.
 
 ### Controls
 
