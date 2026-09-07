@@ -3,7 +3,8 @@
 > Design reference for all budget, income, spending, and scoring systems.
 > All values sourced from `index.html` constants and runtime logic.
 > Regenerated 2026-07-03 after the bug-fix and balance pass; supersedes the earlier
-> version, which described a removed per-cycle fee model.
+> version, which described a removed per-cycle fee model. Updated 2026-09-07 for the
+> phase-3 window change and removal of the never-firing consultant cancellation.
 
 ---
 
@@ -47,8 +48,10 @@ Budget carries over between weeks — there is no reset.
 - **MTTD is live gameplay**, not just a stat: undetected threats are surfaced by an
   exponential process whose **mean time = current MTTD** (base 240 min, floor 30).
   Undetected threats breach after 720/600/480 game-min (Analyst/Engineer/Hunter);
-  campaign-phase-3 actors halve that window. At base MTTD the breach chance per
-  undetected threat is ~5–14%; a tuned program pushes it near zero.
+  campaign-phase-3 actors get that window ×0.75. Phase 3 is the steady state from
+  about day 2 (12 actors, dozens of spawns a day), so this factor is effectively the
+  real window; the earlier ×0.5 made Hunter unwinnable in most runs. At base MTTD the
+  breach chance per undetected threat is ~5–14%; a tuned program pushes it near zero.
 - **Startup grace (week 1 only):** the undetected-breach window is ×1.5 on day 1
   and ×1.25 on day 2, then full pressure from day 3. First threat spawns after
   240/300/180 game-min (Analyst/Engineer/Hunter) — Engineer gets a full real-time
@@ -128,8 +131,7 @@ suppressed categories auto-detect on spawn.
 | Marcus Webb    | +3% coverage, −20 effective vuln score |
 | Priya Nair     | +5% coverage, −10 min MTTD, −10 effective vuln score |
 
-Consultants also deliver a daily prioritised recommendation. They are cancelled
-if the budget is zero at an income tick.
+Consultants also deliver a daily prioritised recommendation.
 
 ## 8. Lessons Learned
 
