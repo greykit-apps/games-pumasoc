@@ -352,7 +352,7 @@ body::after {
 #main {
   display: grid;
   grid-template-columns: 220px 1fr 260px;
-  grid-template-rows: 1fr;
+  grid-template-rows: minmax(0, 1fr) auto; /* row 2 = SIEM strip under the centre+right columns */
   flex: 1;
   overflow: hidden;
 }
@@ -394,6 +394,7 @@ body::after {
 #status-panel {
   overflow-y: auto;
   border-left: none;
+  grid-row: 1 / span 2; /* runs the full height — the SIEM strip only sits under the other two columns */
 }
 #status-panel::-webkit-scrollbar { width: 4px; }
 #status-panel::-webkit-scrollbar-track { background: var(--bg); }
@@ -419,9 +420,11 @@ body::after {
 #incidents-list::-webkit-scrollbar-track { background: var(--bg); }
 #incidents-list::-webkit-scrollbar-thumb { background: var(--border); }
 
-/* ===================== SIEM STRIP (bottom flex child of #game-screen) ===================== */
+/* ===================== SIEM STRIP (row 2 of #main, columns 2-3) ===================== */
 #siem-strip {
-  flex-shrink: 0;
+  grid-column: 2 / span 2;
+  grid-row: 2;
+  min-width: 0;
   height: 210px;
   border-top: 1px solid var(--border);
   background: var(--bg2);
@@ -1444,9 +1447,11 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
   /* Single-column main: panels overlap, JS controls which is visible */
   #main {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto auto; /* panel / tab bar / SIEM strip */
     overflow: hidden;
   }
+  #mobile-tabs { grid-column: 1; grid-row: 2; }
+  #siem-strip { grid-column: 1; grid-row: 3; }
   #status-panel, #incidents-panel, #ops-panel {
     display: none;
     grid-column: 1;
@@ -1803,10 +1808,6 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
           <span class="stat-val" id="stat-threats">0</span>
         </div>
       </div>
-      <div class="ops-section" id="netmap-section">
-        <div class="ops-section-title">── NETWORK MAP ──────────</div>
-        <svg id="netmap" viewBox="0 0 230 385" role="img" aria-label="Infrastructure network map — node colors show health status"></svg>
-      </div>
       <div class="ops-section" id="initiatives-section" style="display:none">
         <div class="ops-section-title">── INITIATIVES ──────────</div>
         <div id="initiatives-list"></div>
@@ -1822,6 +1823,11 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
       <div class="ops-section" id="active-events-section" style="display:none">
         <div class="ops-section-title ops-section-title-crit">── ACTIVE EVENTS ─────────</div>
         <div id="active-events-list"></div>
+      </div>
+      <!-- Decorative — kept last so the operational sections stay above the fold -->
+      <div class="ops-section" id="netmap-section">
+        <div class="ops-section-title">── NETWORK MAP ──────────</div>
+        <svg id="netmap" viewBox="0 0 230 385" role="img" aria-label="Infrastructure network map — node colors show health status"></svg>
       </div>
     </div>
 
@@ -1869,32 +1875,32 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
         <button class="action-btn" id="hire-consultant-btn" onclick="openModal('consultant')" title="7-day engagement. Each consultant provides unique coverage, MTTD, or vuln bonuses.">▶ HIRE CONSULTANT<span class="btn-cost">$75k</span></button>
       </div>
     </div>
-  </div><!-- /#main -->
-
-  <!-- Mobile tab bar — hidden on desktop via CSS -->
-  <div id="mobile-tabs">
-    <button class="mobile-tab active" id="tab-incidents" onclick="switchTab('incidents')" aria-label="Incidents panel" aria-pressed="true">
-      <span class="mobile-tab-icon">⬛</span>INCIDENTS
-      <span class="mobile-tab-badge" id="incident-tab-badge"></span>
-    </button>
-    <button class="mobile-tab" id="tab-ops" onclick="switchTab('ops')" aria-label="Operations panel" aria-pressed="false">
-      <span class="mobile-tab-icon">▶</span>OPERATIONS
-    </button>
-    <button class="mobile-tab" id="tab-status" onclick="switchTab('status')" aria-label="Status panel" aria-pressed="false">
-      <span class="mobile-tab-icon">■</span>STATUS
-    </button>
-  </div>
-
-  <!-- SIEM Strip — full width flex child of #game-screen, click to expand -->
-  <div id="siem-strip" onclick="openSiemPopout()" role="button" tabindex="0" aria-label="SIEM event feed — activate to expand" aria-expanded="false" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSiemPopout();}">
-    <div id="siem-strip-header">
-      <div class="panel-title-dot"></div>
-      <span style="color:var(--green-dim);font-size:10px;letter-spacing:1px">SIEM FEED</span>
-      <span style="color:var(--green-dark);font-size:9px" id="siem-count">0 events</span>
-      <span style="margin-left:auto;color:var(--green-dark);font-size:9px">▲ CLICK TO EXPAND</span>
+    <!-- Mobile tab bar — hidden on desktop via CSS; on phones it is grid row 2, between the
+         active panel and the SIEM strip, preserving the pre-grid stacking order -->
+    <div id="mobile-tabs">
+      <button class="mobile-tab active" id="tab-incidents" onclick="switchTab('incidents')" aria-label="Incidents panel" aria-pressed="true">
+        <span class="mobile-tab-icon">⬛</span>INCIDENTS
+        <span class="mobile-tab-badge" id="incident-tab-badge"></span>
+      </button>
+      <button class="mobile-tab" id="tab-ops" onclick="switchTab('ops')" aria-label="Operations panel" aria-pressed="false">
+        <span class="mobile-tab-icon">▶</span>OPERATIONS
+      </button>
+      <button class="mobile-tab" id="tab-status" onclick="switchTab('status')" aria-label="Status panel" aria-pressed="false">
+        <span class="mobile-tab-icon">■</span>STATUS
+      </button>
     </div>
-    <div id="siem-strip-list" role="log" aria-live="polite" aria-label="SIEM event log"></div>
-  </div>
+    <!-- SIEM Strip — bottom grid row of #main, under the centre and right columns only;
+         the status panel spans every row. Click to expand. -->
+    <div id="siem-strip" onclick="openSiemPopout()" role="button" tabindex="0" aria-label="SIEM event feed — activate to expand" aria-expanded="false" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSiemPopout();}">
+      <div id="siem-strip-header">
+        <div class="panel-title-dot"></div>
+        <span style="color:var(--green-dim);font-size:10px;letter-spacing:1px">SIEM FEED</span>
+        <span style="color:var(--green-dark);font-size:9px" id="siem-count">0 events</span>
+        <span style="margin-left:auto;color:var(--green-dark);font-size:9px">▲ CLICK TO EXPAND</span>
+      </div>
+      <div id="siem-strip-list" role="log" aria-live="polite" aria-label="SIEM event log"></div>
+    </div>
+  </div><!-- /#main -->
 
 </div><!-- /#game-screen -->
 
