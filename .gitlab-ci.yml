@@ -1,4 +1,5 @@
-# Deploys to both pumasoc.greykit.com and greykit.com/games/pumasoc on every main commit.
+# Deploys to greykit.com/games/pumasoc/ on every main commit. The pumasoc.greykit.com
+# subdomain is no longer a target -- the unified games/ path is the only home.
 stages:
   - deploy
 
@@ -48,5 +49,4 @@ deploy:
         done
       }
   script:
-    - puma_rsync -avz --delete --exclude='.git' --exclude='.claude' --exclude='.gitlab-ci.yml' ./ ${DREAMHOST_USERNAME}@${DREAMHOST_HOST}:/home/${DREAMHOST_USERNAME}/pumasoc.greykit.com/
     - puma_rsync -avz --delete --exclude='.git' --exclude='.claude' --exclude='.gitlab-ci.yml' ./ ${DREAMHOST_USERNAME}@${DREAMHOST_HOST}:/home/${DREAMHOST_USERNAME}/greykit.com/games/pumasoc/
