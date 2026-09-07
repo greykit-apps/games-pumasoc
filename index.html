@@ -16,12 +16,12 @@
 <meta property="og:title" content="PumaSOC — Security Operations Center">
 <meta property="og:description" content="Retro cyberpunk SOC management game. Hire analysts, detect threats, patch vulns. Can you hold the line for 7 days?">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://pumasoc.greykit.com/">
-<meta property="og:image" content="https://pumasoc.greykit.com/preview.png">
+<meta property="og:url" content="https://greykit.com/games/pumasoc/">
+<meta property="og:image" content="https://greykit.com/games/pumasoc/preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="PumaSOC — Security Operations Center">
 <meta name="twitter:description" content="Retro cyberpunk SOC management game. Hire analysts, detect threats, patch vulns. Can you hold the line for 7 days?">
-<meta name="twitter:image" content="https://pumasoc.greykit.com/preview.png">
+<meta name="twitter:image" content="https://greykit.com/games/pumasoc/preview.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -1686,7 +1686,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
           <div class="diff-tagline">Established internal security program — well-funded and operationally mature</div>
           <div class="diff-stats">
             <span class="diff-stat pos">Budget $800k  (+$75k/cycle)</span>
-            <span class="diff-stat pos">Coverage 45%  (rules pre-deployed)</span>
+            <span class="diff-stat pos">Coverage 45%  (mature telemetry)</span>
             <span class="diff-stat pos">Analysts 3  (one pre-hired)</span>
             <span class="diff-stat pos">Vuln Score 45  (critical CVEs patched)</span>
           </div>
@@ -1855,7 +1855,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
       </div>
       <div class="ops-section">
         <div class="ops-section-title">── CAPABILITIES ─────────</div>
-        <button class="action-btn" id="detection-action-btn" onclick="openModal('detection')" title="Upgrade detection rules per MITRE ATT&CK category. Each level: +5% coverage, -8min MTTD.">▶ DETECTION ENG<span class="btn-cost" id="detection-btn-cost">$25k</span></button>
+        <button class="action-btn" id="detection-action-btn" onclick="openModal('detection')" title="Upgrade detection rules per MITRE ATT&CK category. Each level: +10% detection for that category, +0.4% overall coverage, -8min MTTD.">▶ DETECTION ENG<span class="btn-cost" id="detection-btn-cost">$25k</span></button>
         <button class="action-btn" id="vuln-action-btn" onclick="openModal('vuln')" title="Patch discovered vulnerabilities. CRIT: -15 vuln score, HIGH: -8, MED: -3 each.">▶ VULN MGMT<span class="btn-cost" id="vuln-btn-cost">$10k</span></button>
         <button class="action-btn" id="soar-action-btn" onclick="openModal('soar')" title="Automate early IR stages. Playbooks give +25-50% speed bonus on Triage &amp; Contain.">▶ SOAR PLATFORM<span class="btn-cost" id="soar-btn-cost">$100k</span></button>
         <button class="action-btn" id="intel-action-btn" onclick="openModal('intel')" title="Subscribe to intel feeds for detection and MTTD bonuses. Feeds expire after 7 days.">▶ THREAT INTEL<span class="btn-cost" id="intel-btn-cost">$100k</span></button>
@@ -2134,7 +2134,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
         <div class="help-section-title" role="heading" aria-level="3">RESPONDING TO INCIDENTS</div>
         <ol>
           <li>CRIT alert fires in the <strong>SIEM strip</strong> at the bottom.</li>
-          <li>Incident card appears in the <strong>centre panel</strong> with a breach countdown.</li>
+          <li>Incident card appears in the <strong>centre panel</strong> with a running dwell timer. An unassigned card turns amber, then red, as the unhandled-breach window runs out.</li>
           <li>Click <strong>ASSIGN ANALYST</strong> — a free analyst begins working it.</li>
           <li>Analyst works through: <span class="help-stage">TRIAGE → CONTAIN → ERADICATE → RECOVER</span></li>
           <li>On RECOVER completing, the analyst is freed and the incident bonus paid immediately. A <strong>LESSONS LEARNED</strong> sign-off lingers for 2h — click it for an optional +1% IR speed bonus in that category (stacks up to 25%). Nothing is lost if you skip it.</li>
@@ -2146,7 +2146,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
           <li><strong>MTTD</strong> — Mean Time to Detect: the average time before an undetected threat is surfaced. If it stays close to the breach window, lurkers detonate before you find them. Rules and intel feeds drive it down.</li>
           <li><strong>Vuln Score</strong> — directly increases threat spawn frequency. ALL unpatched vulns count, including ones you haven't scanned for — unknown exposure is still exposure. Scan to reveal what to patch.</li>
           <li><strong>Analysts Free</strong> — your throughput ceiling. Running 0 free while incidents pile up is the most common way to lose.</li>
-          <li><strong>Budget</strong> — MSSP/SAT run on 7-day contracts you must renew; a consultant is dropped if you're broke at an income tick. Idle money doesn't defend you. Spend it.</li>
+          <li><strong>Budget</strong> — MSSP/SAT run on 7-day contracts you must renew, and consultant engagements lapse after 7 days. Idle money doesn't defend you. Spend it.</li>
         </ul>
 
         <div class="help-section-title" role="heading" aria-level="3">RANDOM EVENTS</div>
@@ -2210,7 +2210,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
         </div>
         <div class="help-cap-row">
           <span class="help-cap-name">PATCH SPRINT — $25k · 8h · free-patches all LOW vulns</span>
-          <span class="help-cap-desc">Analyst focuses entirely on remediation. On completion, patches every discovered LOW-severity vulnerability at no additional cost. Only available when low vulns are outstanding. Excellent value early in the game.</span>
+          <span class="help-cap-desc">Analyst focuses entirely on remediation. On completion, patches every discovered LOW-severity vulnerability at no additional cost. Only available when low vulns are outstanding. LOW vulns don't feed Vuln Score, so this is a grading clean-up (the S/A grades count every unpatched vuln), not a spawn-rate lever.</span>
         </div>
         <div class="help-cap-row">
           <span class="help-cap-name">OSINT RESEARCH — $40k · 12h · 3 guaranteed-detection charges</span>
@@ -2290,7 +2290,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
         <ul>
           <li><strong>Coverage first.</strong> Everything else is secondary until you can detect most threats on spawn.</li>
           <li><strong>Never let analysts sit idle when incidents are open.</strong> Unhandled incidents breach. If all incidents are covered and a slot is free, run an analyst activity.</li>
-          <li><strong>Watch the breach countdown.</strong> The timer on each incident card is how long you have. Triage fast, especially on hard difficulties.</li>
+          <li><strong>Watch the dwell timers.</strong> An unassigned incident breaches when its dwell reaches the unhandled window — the card goes red at 70%. Triage fast, especially on hard difficulties.</li>
           <li><strong>Campaign actors escalate.</strong> The same actor appearing multiple times gains skill and speed. Don't ignore repeated names in the SIEM.</li>
           <li><strong>Vuln Score compounds.</strong> Every point above 50 meaningfully increases spawn rate. Patch regularly — not in bulk emergencies.</li>
           <li><strong>Budget is a weapon, not a score.</strong> Idle money doesn't defend you. Invest aggressively early.</li>
@@ -2756,7 +2756,8 @@ let siemEntryCount = 0;
 const SAVE_KEY = 'pumasoc_save';
 
 function saveState() {
-  if (!G || G.gameOver) return;
+  // Demo/attract runs are never persisted — a restored demo would masquerade as a real session
+  if (!G || G.gameOver || _demoMode) return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       G, selectedDifficulty, siemHistory, siemEntryCount,
@@ -3366,7 +3367,9 @@ function spawnThreat() {
     campaignPhase,
   };
 
-  if (campaignPhase >= 2) {
+  // Log the escalation once per phase transition — every actor reaches phase 3 within
+  // a couple of days, so logging on every spawn was pure noise (and a beep each time)
+  if (campaignPhase >= 2 && camp.count <= 3) {
     siemLog('WARN', 'THREAT-INTEL',
       `${actor.name} campaign phase ${campaignPhase} — persistent attacker pattern detected`,
       `${actor.aka} | ${actor.origin}${campaignPhase === 3 ? ' | ELEVATED SKILL' : ''}`);
@@ -3487,6 +3490,11 @@ function tick() {
   // Expire MSSP contract
   if (G.mssp && G.msspExpiry !== null && G.gameTime >= G.msspExpiry) {
     const _expiredMssp = MSSP_TIERS.find(t => t.id === G.mssp);
+    // Hand any overflow incident back to the queue — nobody is working it once the contract lapses
+    if (G.msspOverflowIncId !== null) {
+      const ovInc = G.incidents.find(i => i.id === G.msspOverflowIncId);
+      if (ovInc && ovInc.analystId === 0) ovInc.analystId = null;
+    }
     G.mssp = null;
     G.msspExpiry = null;
     G.msspOverflowIncId = null;
@@ -3530,6 +3538,7 @@ function tick() {
   // Income
   G.nextIncomeIn -= delta;
   if (G.nextIncomeIn <= 0) {
+    const brokeBeforeIncome = G.budget <= 0;
     G.budget += G.incomeAmount;
     G.totalIncome += G.incomeAmount;
     G.nextIncomeIn = INCOME_INTERVAL_MINS;
@@ -3539,17 +3548,11 @@ function tick() {
       G._onboardIncome = true;
       siemLog('INFO', 'ONBOARD', 'Budget allocated. Idle budget does not defend you — invest in Detection Engineering rules and analysts.');
     }
-    if (G.consultant && G.budget <= 0) {
-      G.consultant = null;
-      G.coverage = calcCoverage();
-      G.mttd = calcMTTD();
-      siemLog('CRIT','FINANCE','Consultant contract terminated — budget depleted. Defensive bonuses removed.');
-    }
-    if (G.budget <= 0 && !G._budgetWarned) {
+    if (brokeBeforeIncome && !G._budgetWarned) {
       G._budgetWarned = true;
-      siemLog('CRIT','FINANCE','BUDGET DEPLETED — unable to fund defensive operations. Hire income sources or reduce spending.');
+      siemLog('CRIT','FINANCE','BUDGET DEPLETED — reserves hit zero before this allocation. Slow the spending or the next crisis lands unfunded.');
     }
-    if (G.budget > 0) G._budgetWarned = false;
+    if (!brokeBeforeIncome) G._budgetWarned = false;
   }
 
   // Noise events
@@ -3593,12 +3596,14 @@ function tick() {
       }
     }
 
-    // Undetected breach — campaign phase 3 threats have halved dwell window.
+    // Undetected breach — campaign phase 3 threats get a shortened (×0.75) dwell window.
+    // Phase 3 is the steady state past day 2 (12 actors, dozens of spawns a day), so this
+    // factor is effectively the real window; ×0.5 made Hunter unwinnable for most runs.
     // Week 1 ramps in gently: the window is 1.5× on day 1 and 1.25× on day 2,
     // so an unlucky early lurker doesn't end a run before the program stands up.
     // Matters most on Engineer/Hunter, where base MTTD sits close to the window.
     const startupGrace = (G.week === 1 && G.gameTime < 2880) ? (G.gameTime < 1440 ? 1.5 : 1.25) : 1;
-    const dwellLimit = ((t.campaignPhase === 3) ? G.breachDwellMins * 0.5 : G.breachDwellMins) * startupGrace;
+    const dwellLimit = ((t.campaignPhase === 3) ? G.breachDwellMins * 0.75 : G.breachDwellMins) * startupGrace;
     if (!t.detected && t.dwell >= dwellLimit) {
       triggerBreach(t, 'UNDETECTED');
     }
@@ -3938,6 +3943,7 @@ function completeLessonsLearned(incidentId) {
 }
 
 function triggerBreach(threat, reason, incident) {
+  if (G.gameOver) return; // the death sequence is already running — don't stack another
   G.breaches++;
   G.weekBreaches++;
   soundBreach();
@@ -4557,7 +4563,7 @@ function fireRandomEvent() {
       detected: false, breachTriggered: false,
       dwell: 0,
       progress: 0,
-      progressRate: 1 / (actor.skill * 2),
+      progressRate: 0.002 / (1 + (5 - 3) * 0.15), // same formula as a skill-5 spawn
     };
     G.threats.push(threat);
     // Force detection immediately
@@ -4579,7 +4585,7 @@ function fireRandomEvent() {
       skill: 3,
       detected: true, breachTriggered: false,
       dwell: 0, progress: 0,
-      progressRate: 1 / 6,
+      progressRate: 0.002,
     };
     G.threats.push(threat);
     createIncident(threat);
@@ -4639,6 +4645,7 @@ function completeRedTeam(job) {
   G.suppressedTechniques.push({ category: suppressCat, expiresAt });
   job.suppressCat = suppressCat;
   job.suppressExpiresAt = expiresAt;
+  job.suppressMins = suppressMins;
   siemLog('OK','RED-TEAM',`ENGAGEMENT COMPLETE: ${job.name}`);
   siemLog('WARN','RED-TEAM',`Findings: ${detGap} detection gaps closed (+${covGain}% coverage), ${discovered} new vulns, 1 suppression window`);
   siemLog('INFO','RED-TEAM',`${suppressCat} threat actors suppressed for ${Math.round(suppressMins/60)}h — IOCs distributed to sensors`);
@@ -5229,7 +5236,7 @@ function renderIncidents() {
   // Dwell time, stage progress, and countdown values are NOT included;
   // they're handled by the fast-path in-place updater below.
   const newSig = `${noAnalysts}|` + active.map(i =>
-    `${i.id}:${i.status}:${i.stageIdx}:${i.analystId}:${_newIncidentIds.has(i.id)?1:0}:${expandedActorCards.has(i.id)?1:0}`
+    `${i.id}:${i.status}:${i.stageIdx}:${i.analystId}:${expandedActorCards.has(i.id)?1:0}`
   ).join('|');
 
   if (newSig === _incSig) {
@@ -5263,8 +5270,9 @@ function renderIncidents() {
           btn.textContent = `▶ LESSONS LEARNED [${countdown}] — ${bonusPreview}`;
         }
       } else {
-        card.classList.toggle('critical', inc.dwell > G.unhandledBreachMins * 0.7);
-        card.classList.toggle('warning',  inc.dwell > G.unhandledBreachMins * 0.4 && inc.dwell <= G.unhandledBreachMins * 0.7);
+        const unassigned = inc.analystId === null;
+        card.classList.toggle('critical', unassigned && inc.dwell > G.unhandledBreachMins * 0.7);
+        card.classList.toggle('warning',  unassigned && inc.dwell > G.unhandledBreachMins * 0.4 && inc.dwell <= G.unhandledBreachMins * 0.7);
         const dwellEl = card.querySelector('[data-dwell]');
         if (dwellEl) {
           const dwellClass = inc.dwell > 20 ? 'dwell-crit' : inc.dwell > 10 ? 'dwell-warn' : 'dwell-ok';
@@ -5330,8 +5338,11 @@ function renderIncidents() {
       return;
     }
 
-    if (inc.dwell > G.unhandledBreachMins * 0.7) card.classList.add('critical');
-    else if (inc.dwell > G.unhandledBreachMins * 0.4) card.classList.add('warning');
+    // Only unassigned incidents run toward the unhandled-breach window
+    if (inc.analystId === null) {
+      if (inc.dwell > G.unhandledBreachMins * 0.7) card.classList.add('critical');
+      else if (inc.dwell > G.unhandledBreachMins * 0.4) card.classList.add('warning');
+    }
 
     const dwellClass = inc.dwell > 20 ? 'dwell-crit' : inc.dwell > 10 ? 'dwell-warn' : 'dwell-ok';
     const dwellStr = fmtDwell(inc.dwell);
@@ -5414,7 +5425,7 @@ function updateRedTeamJobsUI() {
       <div class="redteam-job-bar"><div class="redteam-job-fill" style="width:${pct}%"></div></div>`;
     if (job.done && job.suppressCat && job.suppressExpiresAt) {
       const suppRemaining = Math.max(0, job.suppressExpiresAt - G.gameTime);
-      const suppPct = Math.min(100, (suppRemaining / 2880) * 100);
+      const suppPct = Math.min(100, (suppRemaining / (job.suppressMins || 2880)) * 100);
       html += `<div style="padding-left:8px;margin-top:3px">
         <div class="stat-row" title="Threat suppression from red team findings. ${job.suppressCat} attacks reduced for duration."><span class="stat-label" style="color:var(--amber);opacity:0.85">↳ SUPP: ${job.suppressCat.substring(0,16)}</span><span class="stat-val">${fmtDuration(suppRemaining)}</span></div>
         <div class="mini-bar"><div class="mini-bar-fill warn" style="width:${suppPct}%"></div></div>
@@ -5448,7 +5459,7 @@ function renderInitiatives() {
     'TRAINING': '+10% IR speed for all analysts when complete. Ties up one analyst.',
     'THREAT HUNT': 'Proactively searches for hidden threats. May discover undetected intrusions.',
     'TABLETOP EX.': 'Grants +15% IR speed bonus for 48 game-hours after completion.',
-    'PATCH SPRINT': 'Patches low-severity vulnerabilities. Reduces vuln score on completion.',
+    'PATCH SPRINT': 'Patches every discovered LOW vuln. LOW vulns do not affect vuln score — this only lowers the unpatched count used for grading.',
     'OSINT RESEARCH': 'Grants 3 auto-detection charges on completion. Reveals hidden threats.',
   };
   jobs.forEach(({ label, duration, job }) => {
@@ -5470,7 +5481,7 @@ function renderInitiatives() {
     html += `<div class="mini-bar"><div class="mini-bar-fill warn" style="width:${pct}%"></div></div>`;
   }
   if (G.osintCharges > 0) {
-    html += `<div class="stat-row" title="Auto-detect charges from OSINT research. Each charge instantly reveals one hidden threat."><span class="stat-label">OSINT CHARGES</span><span class="stat-val">${G.osintCharges} left</span></div>`;
+    html += `<div class="stat-row" title="Auto-detect charges from OSINT research. Each charge guarantees the next threat to spawn is detected on entry."><span class="stat-label">OSINT CHARGES</span><span class="stat-val">${G.osintCharges} left</span></div>`;
   }
 
   _ui['initiatives-list'].innerHTML = html;
@@ -6317,6 +6328,7 @@ function newGameClick() {
 function restartGame() {
   clearSavedState();
   clearInterval(tickInterval);
+  G = null; // the global key handlers must not act on a dead game while the difficulty screen is up
   // Clear any pending new-game confirmation so the button resets cleanly
   if (_newGameConfirmTimer) {
     clearTimeout(_newGameConfirmTimer);
@@ -6684,8 +6696,14 @@ function startGame() {
   initState();
   _initUICache();
 
-  // Reset per-session render state
+  // Reset per-session render state and sync the transport controls to the fresh state
   _uiTick = 0;
+  setSpeed(1);
+  document.getElementById('pause-btn').textContent = 'PAUSE';
+  document.getElementById('pause-btn').setAttribute('aria-pressed', 'false');
+  const liveInd = document.getElementById('live-indicator');
+  liveInd.className = 'live';
+  liveInd.textContent = '■ LIVE';
 
   // Set difficulty badge
   const badge = document.getElementById('diff-badge');
@@ -6723,7 +6741,7 @@ function startGame() {
     }, 4000);
     setTimeout(() => {
       if (!G || G.gameOver) return;
-      siemLog('INFO', 'ONBOARD', 'Coverage % is your primary defense metric. Each rule level adds +5%. Target 50%+ before Day 2.');
+      siemLog('INFO', 'ONBOARD', 'Coverage % is your primary defense metric. Each rule level adds +10% detection for its category and cuts MTTD; intel feeds and awareness training are the fast way to lift the overall number. Target 50%+ before Day 2.');
     }, 45000);
   }
 
