@@ -70,7 +70,7 @@ These require a free analyst and budget:
 | **Detection Eng** | $25k–$50k | Upgrade SIEM rules per ATT&CK category — each level adds +10% detection for that category, −8 min MTTD, and +5%÷12 to overall Coverage. 5 levels max per category; cost scales with level. |
 | **Vuln Mgmt** | $15k scan | Scan infrastructure to discover vulnerabilities, then patch individually by severity (CRIT/HIGH/MED/LOW). Every unpatched vuln counts toward Vuln Score — even undiscovered ones — and Vuln Score drives threat spawn rate. |
 | **SOAR Platform** | $100k + $20k/playbook | Deploys automation playbooks that accelerate TRIAGE and CONTAIN stages (+25–50% speed). 12 playbooks available. |
-| **Threat Intel** | $30k–$190k | Subscribe to intel feeds for passive Coverage and MTTD boosts. Each feed lasts 7 game days. |
+| **Threat Intel** | $30k–$190k | Subscribe to intel feeds for passive Coverage and MTTD boosts. Each feed lasts 7 game days; renewing at list price adds 7 days to the current term. |
 
 #### Partners
 

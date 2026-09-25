@@ -1862,7 +1862,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
       <div class="ops-section">
         <div class="ops-section-title">── CAPABILITIES ─────────</div>
         <button class="action-btn" id="detection-action-btn" onclick="openModal('detection')" title="Upgrade detection rules per MITRE ATT&CK category. Each level: +10% detection for that category, +0.4% overall coverage, -8min MTTD.">▶ DETECTION ENG<span class="btn-cost" id="detection-btn-cost">$25k</span></button>
-        <button class="action-btn" id="vuln-action-btn" onclick="openModal('vuln')" title="Patch discovered vulnerabilities. CRIT: -15 vuln score, HIGH: -8, MED: -3 each.">▶ VULN MGMT<span class="btn-cost" id="vuln-btn-cost">$10k</span></button>
+        <button class="action-btn" id="vuln-action-btn" onclick="openModal('vuln')" title="Patch discovered vulnerabilities. CRIT: -15 vuln score, HIGH: -7, MED: -2 each; LOW: no score effect.">▶ VULN MGMT<span class="btn-cost" id="vuln-btn-cost">$10k</span></button>
         <button class="action-btn" id="soar-action-btn" onclick="openModal('soar')" title="Automate early IR stages. Playbooks give +25-50% speed bonus on Triage &amp; Contain.">▶ SOAR PLATFORM<span class="btn-cost" id="soar-btn-cost">$100k</span></button>
         <button class="action-btn" id="intel-action-btn" onclick="openModal('intel')" title="Subscribe to intel feeds for detection and MTTD bonuses. Feeds expire after 7 days.">▶ THREAT INTEL<span class="btn-cost" id="intel-btn-cost">$100k</span></button>
       </div>
@@ -2786,6 +2786,8 @@ function loadSavedState() {
     // Migrate typo: analyistId → analystId (old saves)
     if (G.incidents) G.incidents.forEach(i => {
       if ('analyistId' in i) { i.analystId = i.analyistId; delete i.analyistId; }
+      // Older saves ran the unhandled-breach window off total dwell
+      if (i.unhandledDwell === undefined) i.unhandledDwell = i.analystId === null ? (i.dwell || 0) : 0;
     });
     G.paused = false; // never restore into a paused state
     G.speed = 1;      // always resume at 1x
@@ -2822,6 +2824,7 @@ function loadSavedState() {
     if (G._onboardIncome   === undefined) G._onboardIncome   = true;
     if (G.week === undefined)              G.week              = 1;
     if (G.totalDwellResolved === undefined) G.totalDwellResolved = 0;
+    if (G.weekResolved === undefined)       G.weekResolved       = G.totalResolved || 0;
     if (G.totalIncome === undefined)       G.totalIncome       = 0;
     if (G.w1Grade === undefined) G.w1Grade = '';
     if (G.w2Grade === undefined) G.w2Grade = '';
@@ -2903,7 +2906,8 @@ function initState() {
     paused: false,
     breaches: 0,
     weekBreaches: 0,   // resets each week; used for grade calculation
-    totalResolved: 0,
+    totalResolved: 0,   // campaign-wide, shown in the header
+    weekResolved: 0,    // this week only — pairs with totalDwellResolved for MTTR
     gameOver: false,
     won: false,
     gameOverReason: '',
@@ -3042,6 +3046,13 @@ function fmtDwell(mins) {
   return `${Math.floor(mins/60)}h${Math.floor(mins%60)}m`;
 }
 function getNode(id) { return G.nodes.find(n => n.id === id); }
+// Flag a node as under attack without clobbering an active breach: a breached
+// node keeps its recovery clock, and the recovery pass restores it to
+// under_attack by itself if the new threat is still live when it comes back.
+function markUnderAttack(id) {
+  const n = getNode(id);
+  if (n && n.status !== 'breached') n.status = 'under_attack';
+}
 
 // ================================================================
 // AUDIO ENGINE (Web Audio API — no external files)
@@ -3391,7 +3402,7 @@ function spawnThreat() {
       `${technique} detected targeting ${targetId}`,
       `${actor.aka} | ${actor.origin} | Skill-${actor.skill}`);
     createIncident(threat);
-    getNode(targetId).status = 'under_attack';
+    markUnderAttack(targetId);
   } else {
     // Not immediately detected — may be detected later or become breach
     siemLog('WARN', 'IDS', `Anomalous activity pattern near ${entryId} — low confidence signal`);
@@ -3412,7 +3423,10 @@ function createIncident(threat) {
     stageIdx: 0,
     stageProgress: 0,
     analystId: null,
-    dwell: 0,
+    origin: threat.origin,
+    skill: threat.skill,
+    dwell: 0,          // total time open — feeds MTTR
+    unhandledDwell: 0, // time with no one on it — feeds the unhandled-breach window
     status: 'DETECTED',
     resolved: false,
     breachTriggered: false,
@@ -3445,7 +3459,9 @@ function assignAnalystToIncident(incidentId, silent = false) {
   G.analystSlots[slotIdx] = incidentId;
   recomputeAnalystBusy();
   inc.analystId = slotIdx + 1;
-  inc.status = 'TRIAGING';
+  // Resume at the stage already reached — an incident the MSSP handed back mid-IR
+  // keeps its progress, and the roster should say so
+  inc.status = inc.stageIdx > 0 ? IR_STAGES[inc.stageIdx].name : 'TRIAGING';
   siemLog('OK', 'SOC-ANALYST', `Analyst ${inc.analystId} assigned to incident #${incidentId} — ${inc.actor}::${inc.technique}`);
   if (Math.random() < 0.3) siemLog('INFO', `SOC-A${inc.analystId}`, pick(TRIAGE_QUIPS));
   updateUI();
@@ -3454,8 +3470,6 @@ function assignAnalystToIncident(incidentId, silent = false) {
 // ================================================================
 // GAME TICK
 // ================================================================
-
-let lastRealTime = null;
 
 function tick() {
   if (G.paused || G.gameOver) return;
@@ -3496,11 +3510,7 @@ function tick() {
   // Expire MSSP contract
   if (G.mssp && G.msspExpiry !== null && G.gameTime >= G.msspExpiry) {
     const _expiredMssp = MSSP_TIERS.find(t => t.id === G.mssp);
-    // Hand any overflow incident back to the queue — nobody is working it once the contract lapses
-    if (G.msspOverflowIncId !== null) {
-      const ovInc = G.incidents.find(i => i.id === G.msspOverflowIncId);
-      if (ovInc && ovInc.analystId === 0) ovInc.analystId = null;
-    }
+    releaseOverflowIncident(); // nobody is working it once the contract lapses
     G.mssp = null;
     G.msspExpiry = null;
     G.msspOverflowIncId = null;
@@ -3598,7 +3608,7 @@ function tick() {
           `LATE DETECTION: ${t.technique} on ${t.targetId} — dwell ${dStr}`,
           `MTTD exceeded threshold`);
         createIncident(t);
-        getNode(t.targetId).status = 'under_attack';
+        markUnderAttack(t.targetId);
       }
     }
 
@@ -3628,8 +3638,11 @@ function tick() {
     inc.dwell += delta;
 
     if (inc.analystId === null) {
-      // Unhandled — check for breach
-      if (inc.dwell >= G.unhandledBreachMins) {
+      // Unhandled — only this clock runs toward the breach window. Total dwell
+      // keeps counting while an analyst (or the MSSP) works it, and an incident
+      // handed back by the MSSP must not breach for time it was being worked.
+      inc.unhandledDwell = (inc.unhandledDwell || 0) + delta;
+      if (inc.unhandledDwell >= G.unhandledBreachMins) {
         triggerBreach(null, 'UNHANDLED', inc);
       }
       return;
@@ -3684,7 +3697,7 @@ function tick() {
     found.forEach(t => {
       t.detected = true;
       createIncident(t);
-      getNode(t.targetId).status = 'under_attack';
+      markUnderAttack(t.targetId);
       siemLog('CRIT','HUNT',`Threat hunter surfaced active intrusion: ${t.technique} on ${t.targetId} — dwell ${fmtDwell(t.dwell)}`);
     });
     if (found.length === 0) siemLog('OK','HUNT','Threat hunt complete — environment appears clean, no lurking threats found');
@@ -3870,7 +3883,11 @@ function tick() {
   const t = fmtTime(G.gameTime);
   if (t.day > WIN_DAYS * G.week && !G.gameOver) {
     if (_demoMode) {
-      // Demo loops: restart quietly rather than showing win screen
+      // Demo loops: freeze this run and restart quietly rather than showing the
+      // win screen. gameOver stops the tick, so this branch cannot re-fire during
+      // the hand-off and triggerWin cannot sneak in once the demo flag drops —
+      // that used to flash the win overlay and stamp puma-seen-intro from a demo.
+      G.gameOver = true;
       setTimeout(() => { if (_demoMode) { exitDemoMode(); setTimeout(startDemoMode, 800); } }, 500);
     } else {
       triggerWin();
@@ -3891,6 +3908,7 @@ function completeIR(inc) {
   inc.status = 'LESSONS_PENDING';
   inc.lessonsPendingUntil = G.gameTime + 120; // 2 game hours to file the debrief
   G.totalResolved++;
+  G.weekResolved++;
   G.totalDwellResolved += Math.floor(inc.dwell || 0);
   G._dayResolved++;
   soundResolve();
@@ -4020,8 +4038,8 @@ function computeFinalScore() {
   const startBudget    = (DIFFICULTIES[selectedDifficulty] || {}).budget || 0;
   const totalSpent     = Math.max(0, startBudget + (G.totalIncome || 0) - Math.max(0, G.budget));
   const mttdMins       = G.mttd;
-  const mttrMins       = G.totalResolved > 0
-    ? Math.round((G.totalDwellResolved || 0) / G.totalResolved) : 0;
+  const mttrMins       = G.weekResolved > 0
+    ? Math.round((G.totalDwellResolved || 0) / G.weekResolved) : 0;
   const coverage       = G.coverage;
   const unknownVulns   = G.vulns.filter(v => !v.discovered).length;
   // All unpatched vulns count against the grade — you can't ignore what you haven't scanned
@@ -4100,6 +4118,7 @@ function buildScoreCardHTML(s) {
 
 function startBreachDeathSequence(reason) {
   G.breachDying = true;
+  _deathSoundTimers = []; // every timer the sequence schedules goes here so restartGame() can cancel it
   // Lock in the loss immediately: flag game over and clear the autosave so
   // closing the tab mid-sequence can't resurrect the run at 3/3 breaches
   G.gameOver = true;
@@ -4115,15 +4134,14 @@ function startBreachDeathSequence(reason) {
   screen.classList.add('breach-dying');
 
   // Show skull for last 5 seconds
-  setTimeout(() => {
-    if (G.breachDying) document.getElementById('breach-skull-overlay').classList.add('visible');
-  }, DEATH_MS - 5000);
+  _deathSoundTimers.push(setTimeout(() => {
+    if (G && G.breachDying) document.getElementById('breach-skull-overlay').classList.add('visible');
+  }, DEATH_MS - 5000));
 
   // Klaxon/buzzer sound schedule
-  _deathSoundTimers = [];
   const scheduleKlaxon = (delayMs) => {
     const t = setTimeout(() => {
-      if (!G.breachDying) return;
+      if (!G || !G.breachDying) return;
       // Harsh buzzer: low sawtooth + square overtone
       playTone(90, 'sawtooth', 0.35, 0.12, 0);
       playTone(180, 'square', 0.25, 0.06, 0.05);
@@ -4138,7 +4156,7 @@ function startBreachDeathSequence(reason) {
   for (let i = 0; i < 8; i++) scheduleKlaxon(10000 + i * 550);
   // Final deep drone
   _deathSoundTimers.push(setTimeout(() => {
-    if (!G.breachDying) return;
+    if (!G || !G.breachDying) return;
     playTone(55, 'sawtooth', 1.5, 0.15, 0);
     playTone(110, 'square', 1.0, 0.08, 0.2);
   }, 13500));
@@ -4155,13 +4173,13 @@ function startBreachDeathSequence(reason) {
   ];
   deathLogs.forEach(([ms, sev, src, msg]) => {
     _deathSoundTimers.push(setTimeout(() => {
-      if (G.breachDying) siemLog(sev, src, msg);
+      if (G && G.breachDying) siemLog(sev, src, msg);
     }, ms));
   });
 
   // rAF loop for progressive CSS
   const deathFrame = () => {
-    if (!G.breachDying) return;
+    if (!G || !G.breachDying) return; // NEW GAME mid-sequence nulls G — restartGame() did the cleanup
     const elapsed = performance.now() - start;
     const progress = Math.min(1, elapsed / DEATH_MS);
     document.documentElement.style.setProperty('--death-progress', progress.toFixed(3));
@@ -4228,7 +4246,10 @@ function continueToNextWeek() {
   G.gameOver = false;
   G.won = false;
   G.weekBreaches = 0;
+  // MTTR is a per-week figure: reset BOTH the dwell sum and the count it is
+  // divided by, or week 2's first resolve reads as a few minutes
   G.totalDwellResolved = 0;
+  G.weekResolved = 0;
   // G.totalIncome stays cumulative across weeks for end-card budget math
 
   // Signature decay — adversaries adapted TTPs (deeper decay in later weeks)
@@ -4509,12 +4530,8 @@ function enrollMSSP(tierId) {
   if (G.budget < cost) { siemLog('WARN','HR',`Insufficient budget for ${tier.name}`); return; }
   G.budget -= cost;
   const wasUpgrade = G.mssp && !isSameTier;
-  // If switching away from a tier that had overflow, free any overflow incident
-  if (!tier.overflow && G.msspOverflowIncId !== null) {
-    const ovInc = G.incidents.find(i => i.id === G.msspOverflowIncId);
-    if (ovInc) ovInc.analystId = null;
-    G.msspOverflowIncId = null;
-  }
+  // Switching to a tier without overflow hands any overflow incident back
+  if (!tier.overflow) releaseOverflowIncident();
   G.mssp = tierId;
   G.msspExpiry = G.gameTime + MSSP_DURATION_DAYS * 1440;
   selectedMSSPTier = tierId; // keep selection in sync with active tier
@@ -4529,14 +4546,26 @@ function enrollMSSP(tierId) {
   closeModal('mssp');
 }
 
+// Hand the MSSP-overflow incident (analystId 0) back to the queue. Total dwell is
+// kept for MTTR, but the unhandled clock restarts from zero — the time the MSSP
+// spent working it was not time it sat unattended, and charging it against the
+// breach window used to make a hand-back breach on the very next tick.
+function releaseOverflowIncident() {
+  if (G.msspOverflowIncId === null) return;
+  const ovInc = G.incidents.find(i => i.id === G.msspOverflowIncId);
+  if (ovInc && ovInc.analystId === 0 && !ovInc.resolved && !ovInc.breachTriggered) {
+    ovInc.analystId = null;
+    ovInc.unhandledDwell = 0;
+    ovInc.status = 'DETECTED';
+    siemLog('WARN','MSSP',`Overflow handling withdrawn — incident #${ovInc.id} (${ovInc.actor}::${ovInc.technique}) returned to the queue at ${IR_STAGES[ovInc.stageIdx] ? IR_STAGES[ovInc.stageIdx].name : 'TRIAGE'}`, 'Assign an analyst to resume');
+  }
+  G.msspOverflowIncId = null;
+}
+
 function terminateMSSP() {
   if (!G.mssp) return;
   const tier = MSSP_TIERS.find(t => t.id === G.mssp);
-  // Free any MSSP overflow incident before clearing state
-  if (G.msspOverflowIncId !== null) {
-    const ovInc = G.incidents.find(i => i.id === G.msspOverflowIncId);
-    if (ovInc) ovInc.analystId = null;
-  }
+  releaseOverflowIncident();
   G.mssp = null;
   G.msspExpiry = null;
   G.msspOverflowIncId = null;
@@ -4562,10 +4591,10 @@ function fireRandomEvent() {
     const entryId = pick(ENTRY_NODES);
     const threat = {
       id: G.nextThreatId++,
-      actor: actor.name, actorDesc: actor.desc,
+      actor: actor.name, actorAka: actor.aka, origin: actor.origin,
       technique, techniqueCategory: cat,
       targetId, entryId,
-      skill: 5,
+      skill: 5, campaignPhase: 1,
       detected: false, breachTriggered: false,
       dwell: 0,
       progress: 0,
@@ -4575,7 +4604,7 @@ function fireRandomEvent() {
     // Force detection immediately
     threat.detected = true;
     createIncident(threat);
-    getNode(targetId).status = 'under_attack';
+    markUnderAttack(targetId);
     siemLog('CRIT', actor.name, `ZERO-DAY EXPLOITATION: ${technique} targeting ${targetId}`);
   }
   if (ev.insiderSpawn) {
@@ -4585,17 +4614,17 @@ function fireRandomEvent() {
     const targetId = pick(TARGET_NODES);
     const threat = {
       id: G.nextThreatId++,
-      actor: 'INSIDER', actorDesc: 'Malicious insider — privileged access',
+      actor: 'INSIDER', actorAka: 'Malicious insider', origin: 'Internal — privileged access',
       technique, techniqueCategory: cat,
       targetId, entryId: targetId,
-      skill: 3,
+      skill: 3, campaignPhase: 1,
       detected: true, breachTriggered: false,
       dwell: 0, progress: 0,
       progressRate: 0.002,
     };
     G.threats.push(threat);
     createIncident(threat);
-    getNode(targetId).status = 'under_attack';
+    markUnderAttack(targetId);
   }
   if (ev.duration > 0) {
     G.activeRandomEvents.push({
@@ -4632,9 +4661,11 @@ function launchRedTeam() {
 function completeRedTeam(job) {
   const detGap = rnd(1, 3);
   const vulnsFound = rnd(1, 4);
-  // Persistent coverage gain — stored separately so calcCoverage() doesn't wipe it
-  const covGain = detGap * 2;
-  G.redTeamCoverageBonus = Math.min(10, (G.redTeamCoverageBonus || 0) + covGain);
+  // Persistent coverage gain — stored separately so calcCoverage() doesn't wipe it.
+  // Capped at +10 total, and the log reports what was actually applied.
+  const prevBonus = G.redTeamCoverageBonus || 0;
+  G.redTeamCoverageBonus = Math.min(10, prevBonus + detGap * 2);
+  const covGain = G.redTeamCoverageBonus - prevBonus;
   G.coverage = calcCoverage();
   // Discover hidden vulns (and auto-scan — red teamers document what they find)
   let discovered = 0;
@@ -4653,7 +4684,7 @@ function completeRedTeam(job) {
   job.suppressExpiresAt = expiresAt;
   job.suppressMins = suppressMins;
   siemLog('OK','RED-TEAM',`ENGAGEMENT COMPLETE: ${job.name}`);
-  siemLog('WARN','RED-TEAM',`Findings: ${detGap} detection gaps closed (+${covGain}% coverage), ${discovered} new vulns, 1 suppression window`);
+  siemLog('WARN','RED-TEAM',`Findings: ${detGap} detection gaps closed (${covGain > 0 ? `+${covGain}% coverage` : 'coverage bonus already at the +10% cap'}), ${discovered} new vulns, 1 suppression window`);
   siemLog('INFO','RED-TEAM',`${suppressCat} threat actors suppressed for ${Math.round(suppressMins/60)}h — IOCs distributed to sensors`);
   document.getElementById('redteam-jobs-section').style.display = '';
   updateRedTeamJobsUI();
@@ -4691,19 +4722,20 @@ function generateConsultantAdvice() {
     };
   }
 
-  // Priority 4: Vuln score dangerously high
-  if (G.vulnScore > 65) {
+  // Priority 4: Vuln score dangerously high — the effective score, i.e. the one on the panel
+  const effVuln = effectiveVulnScore();
+  if (effVuln > 65) {
     const undiscovered = G.vulns.filter(v => !v.discovered).length;
     if (undiscovered > 0) return {
       priority: 'HIGH',
       action: 'VULN MGMT',
-      text: `Vuln score at ${G.vulnScore} with ${undiscovered} unscanned assets. You have unknown exposures. Attackers may already know your attack surface better than you do. Scan now.`
+      text: `Vuln score at ${effVuln} with ${undiscovered} unscanned assets. You have unknown exposures. Attackers may already know your attack surface better than you do. Scan now.`
     };
-    const unpatchedCrit = G.vulns.filter(v => v.discovered && !v.patched && v.severity === 'HIGH').length;
+    const unpatchedSevere = G.vulns.filter(v => v.discovered && !v.patched && (v.severity === 'CRIT' || v.severity === 'HIGH')).length;
     return {
       priority: 'HIGH',
       action: 'VULN MGMT',
-      text: `${unpatchedCrit} critical vulnerabilities unpatched. Each one is a foothold waiting to be exploited. Patch the HIGH severity findings before the next attack wave hits.`
+      text: `${unpatchedSevere} CRIT/HIGH vulnerabilities unpatched. Each one is a foothold waiting to be exploited. Patch the CRIT and HIGH severity findings before the next attack wave hits.`
     };
   }
 
@@ -4744,7 +4776,7 @@ function generateConsultantAdvice() {
   return {
     priority: 'LOW',
     action: null,
-    text: `Posture is stabilizing — coverage ${Math.round(G.coverage)}%, MTTD ${G.mttd} min, vuln score ${G.vulnScore}. ${daysLeft > 3 ? 'Consider a full red team engagement to stress-test your defenses before the next escalation.' : 'Final stretch — maintain coverage and keep analysts available. Don\'t let your guard down.'}`
+    text: `Posture is stabilizing — coverage ${Math.round(G.coverage)}%, MTTD ${G.mttd} min, vuln score ${effectiveVulnScore()}. ${daysLeft > 3 ? 'Consider a full red team engagement to stress-test your defenses before the next escalation.' : 'Final stretch — maintain coverage and keep analysts available. Don\'t let your guard down.'}`
   };
 }
 
@@ -4767,20 +4799,25 @@ function hireConsultant(id) {
   renderConsultantCard();
 }
 
+// Subscribe to a feed, or renew one that is already active. A renewal adds a
+// full term on top of the current expiry, so renewing early wastes nothing —
+// the help text has always said feeds can be renewed before they lapse.
 function purchaseIntelFeed(feedId) {
-  if (G.activeIntelFeeds.includes(feedId)) return;
-  const feed = [...INTEL_FEEDS, ...INTEL_FEEDS_W2, ...INTEL_FEEDS_W3, ...INTEL_FEEDS_W4].find(f => f.id === feedId);
+  const feed = _ALL_FEEDS.find(f => f.id === feedId);
   if (!feed) return;
   if (G.budget < feed.cost) { siemLog('WARN','OPS','Insufficient budget for intel feed'); return; }
   G.budget -= feed.cost;
-  G.activeIntelFeeds.push(feedId);
-  const expiresAt = G.gameTime + INTEL_FEED_DURATION_DAYS * 1440;
   if (!G.intelFeedExpiry) G.intelFeedExpiry = {};
+  const renewing = G.activeIntelFeeds.includes(feedId);
+  const termStart = renewing ? Math.max(G.gameTime, G.intelFeedExpiry[feedId] || 0) : G.gameTime;
+  const expiresAt = termStart + INTEL_FEED_DURATION_DAYS * 1440;
+  if (!renewing) G.activeIntelFeeds.push(feedId);
   G.intelFeedExpiry[feedId] = expiresAt;
   G.coverage = calcCoverage();
   G.mttd = calcMTTD();
   const expiryDay = Math.floor(expiresAt / 1440) + 1;
-  siemLog('OK','THREAT-INTEL',`Feed activated: ${feed.name}`, `Detection: +${feed.detectionBonus}% | MTTD: -${feed.mttdBonus}min | Expires Day ${expiryDay}`);
+  if (renewing) siemLog('OK','THREAT-INTEL',`Feed renewed: ${feed.name} — +${INTEL_FEED_DURATION_DAYS} days`, `Expires Day ${expiryDay}`);
+  else siemLog('OK','THREAT-INTEL',`Feed activated: ${feed.name}`, `Detection: +${feed.detectionBonus}% | MTTD: -${feed.mttdBonus}min | Expires Day ${expiryDay}`);
   renderIntelModal();
 }
 
@@ -4907,7 +4944,7 @@ function updateUI() {
   }
   _prevMttd = G.mttd;
 
-  const mttr = G.totalResolved > 0 ? Math.round((G.totalDwellResolved || 0) / G.totalResolved) : 0;
+  const mttr = G.weekResolved > 0 ? Math.round((G.totalDwellResolved || 0) / G.weekResolved) : 0;
   _ui['stat-mttr'].textContent = mttr > 0 ? `${mttr} min` : '—';
   _ui['stat-mttr'].classList.toggle('warn', mttr > 120);
 
@@ -4917,7 +4954,9 @@ function updateUI() {
   _ui['bar-vuln'].style.width = `${vs}%`;
   _ui['bar-vuln'].className = `mini-bar-fill${vs > 60 ? ' crit' : vs > 40 ? ' warn' : ''}`;
 
-  const activeThreats = G.threats.filter(t => !t.breachTriggered).length;
+  // Detected only — an undetected intrusion is not something the SOC knows about,
+  // and counting it here leaked exactly the intel a threat hunt is for
+  const activeThreats = G.threats.filter(t => t.detected && !t.breachTriggered).length;
   _ui['stat-threats'].textContent = activeThreats;
 
   _ui['stat-income'].textContent = `${Math.round(G.nextIncomeIn / 60)}h`;
@@ -5085,15 +5124,12 @@ function updateUI() {
                      : G.week >= 3 ? [...INTEL_FEEDS, ...INTEL_FEEDS_W2, ...INTEL_FEEDS_W3]
                      : G.week >= 2 ? [...INTEL_FEEDS, ...INTEL_FEEDS_W2]
                      : INTEL_FEEDS;
+      // Cheapest new subscription, or — once everything is active — cheapest renewal
       const available = weekFeeds.filter(f => !G.activeIntelFeeds.includes(f.id));
-      if (available.length === 0) {
-        intelCostEl.textContent = 'ALL ACTIVE';
-        _ui['intel-action-btn'].disabled = true;
-      } else {
-        const minCost = Math.min(...available.map(f => f.cost));
-        intelCostEl.textContent = fmt$(minCost);
-        _ui['intel-action-btn'].disabled = G.budget < minCost;
-      }
+      const buyable = available.length > 0 ? available : weekFeeds;
+      const minCost = Math.min(...buyable.map(f => f.cost));
+      intelCostEl.textContent = fmt$(minCost);
+      _ui['intel-action-btn'].disabled = G.budget < minCost;
     }
   }
 
@@ -5195,10 +5231,10 @@ function buildTooltips() {
   }
   // MTTR breakdown
   {
-    const mttr = G.totalResolved > 0 ? Math.round((G.totalDwellResolved || 0) / G.totalResolved) : 0;
+    const mttr = G.weekResolved > 0 ? Math.round((G.totalDwellResolved || 0) / G.weekResolved) : 0;
     const parts = [];
-    if (G.totalResolved > 0) {
-      parts.push(`Avg: ${mttr}min (${G.totalResolved} resolved)`);
+    if (G.weekResolved > 0) {
+      parts.push(`Avg: ${mttr}min (${G.weekResolved} resolved this week)`);
       const speedParts = [];
       if (G.analystSpeedBonus > 0) speedParts.push(`Training +${Math.round(G.analystSpeedBonus * 100)}%`);
       if (G.gameTime < G.tabletopBonusExpiresAt) speedParts.push('Tabletop +15%');
@@ -5218,8 +5254,8 @@ function buildTooltips() {
   }
   // ACTIVE THREATS
   {
-    const active = G.threats.filter(t => !t.breachTriggered).length;
-    if (_ui['tip-threats']) _ui['tip-threats'].title = `Active: ${active}`;
+    const active = G.threats.filter(t => t.detected && !t.breachTriggered).length;
+    if (_ui['tip-threats']) _ui['tip-threats'].title = `Detected & active: ${active} \u2502 Undetected intrusions are not counted \u2014 run a threat hunt to surface them`;
   }
 }
 
@@ -5277,8 +5313,9 @@ function renderIncidents() {
         }
       } else {
         const unassigned = inc.analystId === null;
-        card.classList.toggle('critical', unassigned && inc.dwell > G.unhandledBreachMins * 0.7);
-        card.classList.toggle('warning',  unassigned && inc.dwell > G.unhandledBreachMins * 0.4 && inc.dwell <= G.unhandledBreachMins * 0.7);
+        const ud = inc.unhandledDwell || 0;
+        card.classList.toggle('critical', unassigned && ud > G.unhandledBreachMins * 0.7);
+        card.classList.toggle('warning',  unassigned && ud > G.unhandledBreachMins * 0.4 && ud <= G.unhandledBreachMins * 0.7);
         const dwellEl = card.querySelector('[data-dwell]');
         if (dwellEl) {
           const dwellClass = inc.dwell > 20 ? 'dwell-crit' : inc.dwell > 10 ? 'dwell-warn' : 'dwell-ok';
@@ -5346,8 +5383,9 @@ function renderIncidents() {
 
     // Only unassigned incidents run toward the unhandled-breach window
     if (inc.analystId === null) {
-      if (inc.dwell > G.unhandledBreachMins * 0.7) card.classList.add('critical');
-      else if (inc.dwell > G.unhandledBreachMins * 0.4) card.classList.add('warning');
+      const ud = inc.unhandledDwell || 0;
+      if (ud > G.unhandledBreachMins * 0.7) card.classList.add('critical');
+      else if (ud > G.unhandledBreachMins * 0.4) card.classList.add('warning');
     }
 
     const dwellClass = inc.dwell > 20 ? 'dwell-crit' : inc.dwell > 10 ? 'dwell-warn' : 'dwell-ok';
@@ -5373,12 +5411,17 @@ function renderIncidents() {
         ? `<button class="assign-btn" disabled title="All analysts busy — hire more or wait for one to finish">⚠ ALL ANALYSTS BUSY</button>`
         : `<button class="assign-btn" data-incident-id="${inc.id}">ASSIGN ANALYST</button>`;
 
+    // Profile comes from the incident itself (event-spawned actors such as INSIDER
+    // are not in ACTORS); the roster is only a fallback for pre-field saves
     const actorData = ACTORS.find(a => a.name === inc.actor);
     const actorExpanded = expandedActorCards.has(inc.id);
-    const actorIntelHtml = actorExpanded && actorData ? `
+    const aka    = inc.actorAka || (actorData && actorData.aka)    || 'Unknown';
+    const origin = inc.origin   || (actorData && actorData.origin) || 'Unknown';
+    const skill  = Math.max(0, Math.min(5, inc.skill || (actorData && actorData.skill) || 0));
+    const actorIntelHtml = actorExpanded ? `
       <div class="actor-intel-panel">
-        <span style="color:var(--green)">${actorData.name}</span> // ${actorData.aka} — ${actorData.origin}<br>
-        Skill: ${'█'.repeat(actorData.skill)}${'░'.repeat(5 - actorData.skill)} ${actorData.skill}/5 &nbsp;|&nbsp; TTPs: ${inc.techniqueCategory}
+        <span style="color:var(--green)">${inc.actor}</span> // ${aka} — ${origin}<br>
+        Skill: ${'█'.repeat(skill)}${'░'.repeat(5 - skill)} ${skill}/5 &nbsp;|&nbsp; TTPs: ${inc.techniqueCategory}
       </div>` : '';
     card.innerHTML = `
       <div class="incident-header" data-actor-toggle="${inc.id}" style="cursor:pointer">
@@ -5610,7 +5653,6 @@ function updateActiveEventsUI() {
   list.innerHTML = '';
   G.activeRandomEvents.forEach(ev => {
     const remaining = Math.max(0, ev.endsAt - G.gameTime);
-    const pct = Math.max(0, Math.round((remaining / (ev.endsAt - (ev.endsAt - (ev.coveragePenalty > 0 ? 480 : 240)))) * 100));
     const d = document.createElement('div');
     d.className = 'redteam-job';
     d.style.color = 'var(--red)';
@@ -5991,10 +6033,7 @@ function renderIntelModal() {
       <div style="font-size:9px;color:var(--green-dim);margin-top:2px">
         Detection +${feed.detectionBonus}% | MTTD -${feed.mttdBonus}min${feed.vulnBonus ? ` | Vuln -${feed.vulnBonus}` : ''} | ${INTEL_FEED_DURATION_DAYS}-day sub: ${fmt$(feed.cost)}
       </div>
-      ${active
-        ? ''
-        : `<button class="intel-btn" onclick="purchaseIntelFeed('${feed.id}')" ${G.budget<feed.cost?'disabled':''}>▶ SUBSCRIBE ${fmt$(feed.cost)}</button>`
-      }
+      <button class="intel-btn" onclick="purchaseIntelFeed('${feed.id}')" ${G.budget<feed.cost?'disabled':''}>▶ ${active ? `RENEW +${INTEL_FEED_DURATION_DAYS}d` : 'SUBSCRIBE'} ${fmt$(feed.cost)}</button>
     `;
     optDiv.appendChild(d);
   });
@@ -6237,14 +6276,21 @@ document.addEventListener('keydown', e => {
   if (onGameScreen && (e.key === 'm' || e.key === 'M') && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) toggleMute();
 });
 
-// Delegated listener for briefing toggle — survives DOM re-renders every tick
-document.getElementById('consultant-ops-section').addEventListener('mousedown', e => {
+// Delegated listeners — they survive the DOM re-renders every tick. Mouse input
+// is taken on mousedown so a list rebuild between press and release cannot eat
+// the action. Keyboard activation (Enter on a focused button) arrives only as a
+// click with detail 0, so that is the one click these handlers act on — a real
+// mouse click was already handled at mousedown.
+function _isKeyboardClick(e) { return e.type === 'click' && e.detail === 0; }
+function _onBriefingAction(e) {
+  if (e.type === 'click' && !_isKeyboardClick(e)) return;
   const btn = e.target.closest('[data-action="toggle-briefing"]');
   if (btn) toggleBriefing();
-});
+}
+['mousedown', 'click'].forEach(t => document.getElementById('consultant-ops-section').addEventListener(t, _onBriefingAction));
 
-// Delegated listener for assign + lessons buttons — survives DOM re-renders every tick
-document.getElementById('incidents-list').addEventListener('mousedown', e => {
+function _onIncidentAction(e) {
+  if (e.type === 'click' && !_isKeyboardClick(e)) return;
   const assignBtn = e.target.closest('[data-incident-id]');
   if (assignBtn && !assignBtn.disabled) { assignAnalystToIncident(parseInt(assignBtn.dataset.incidentId)); return; }
   const lessonsBtn = e.target.closest('[data-lessons-id]');
@@ -6256,7 +6302,8 @@ document.getElementById('incidents-list').addEventListener('mousedown', e => {
     else expandedActorCards.add(id);
     renderIncidents();
   }
-});
+}
+['mousedown', 'click'].forEach(t => document.getElementById('incidents-list').addEventListener(t, _onIncidentAction));
 
 // Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -6334,6 +6381,16 @@ function newGameClick() {
 function restartGame() {
   clearSavedState();
   clearInterval(tickInterval);
+  // Abort a running breach death sequence cleanly. Its timers and rAF loop read
+  // G.breachDying, and the CSS it applies is only removed by its own final frame,
+  // so cancel and undo it here before G goes away — otherwise the next game
+  // inherits the permanent glitch-shake and, past the 10s mark, the skull.
+  _deathSoundTimers.forEach(clearTimeout);
+  _deathSoundTimers = [];
+  if (G) G.breachDying = false;
+  document.getElementById('game-screen').classList.remove('breach-dying');
+  document.getElementById('breach-skull-overlay').classList.remove('visible');
+  document.documentElement.style.removeProperty('--death-progress');
   G = null; // the global key handlers must not act on a dead game while the difficulty screen is up
   // Clear any pending new-game confirmation so the button resets cleanly
   if (_newGameConfirmTimer) {

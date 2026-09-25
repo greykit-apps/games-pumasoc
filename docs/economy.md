@@ -56,7 +56,8 @@ Budget carries over between weeks — there is no reset.
   and ×1.25 on day 2, then full pressure from day 3. First threat spawns after
   240/300/180 game-min (Analyst/Engineer/Hunter) — Engineer gets a full real-time
   minute of setup; Hunter gets no breathing room by design.
-- **Intel feeds** (7-day subscriptions from purchase):
+- **Intel feeds** (7-day subscriptions from purchase; renewable at list price,
+  and a renewal extends the current term rather than restarting it):
 
 | Feed (week unlocked)           | Cost  | Detection | MTTD    | Vuln bonus |
 |--------------------------------|-------|-----------|---------|------------|
