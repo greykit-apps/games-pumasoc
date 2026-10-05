@@ -1305,6 +1305,19 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
   height: 13px;
   min-height: 13px;
 }
+/* greykit.games canon §1 — the credit; link styled here, not inline */
+.gk-credit a {
+  color: var(--amber);
+  text-decoration: none;
+  border-bottom: 1px solid var(--amber-dim);
+}
+#difficulty-screen .gk-credit {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--green-dim);
+  margin-top: 14px;
+}
 .demo-mode-badge {
   color: var(--amber) !important;
   animation: blink 1s step-end infinite;
@@ -1727,6 +1740,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
     <div id="diff-confirm">▋ PRESS [ENTER] TO DEPLOY</div>
     <div id="demo-attract-bar"></div>
   </div>
+  <div class="gk-credit">Built by <a href="https://greykit.com/" target="_blank" rel="noopener">greykit.com</a></div>
 </div>
 
 <!-- ===================== GAME SCREEN ===================== -->
@@ -2328,7 +2342,7 @@ body.crt-flicker { animation: crt-flicker-anim 0.22s linear; }
 
         <p style="line-height:1.65;margin-bottom:16px;color:var(--green-dim)">I'm not a developer, but with the dawn of AI-assisted development, all I have to be is a project manager and UX tester. I truly believe that we are at a turning point in cybersecurity unlike anything we have seen before, and that AI is the ultimate Red Queen. The fact that you are reading this at all proves it to be true.</p>
 
-        <p>Built by <a href="https://www.greykit.com" target="_blank" style="color:var(--amber);text-decoration:none;border-bottom:1px solid var(--amber-dim)">greykit.com</a></p>
+        <p class="gk-credit">Built by <a href="https://greykit.com/" target="_blank" rel="noopener">greykit.com</a></p>
       </div>
 
     </div>
