@@ -2860,7 +2860,24 @@ function loadSavedState() {
 }
 
 function clearSavedState() {
-  localStorage.removeItem(SAVE_KEY);
+  try { localStorage.removeItem(SAVE_KEY); } catch(e) { /* no storage */ }
+}
+
+// One-shot first-run flags. They were 'puma-seen-intro' / 'puma-seen-help',
+// which carry no game prefix on an origin every greykit.com game shares; an old
+// flag still counts, and is moved to the new key the first time it is read.
+const SEEN_KEYS = { intro: 'pumasoc_seen_intro_v1', help: 'pumasoc_seen_help_v1' };
+function hasSeen(what) {
+  try {
+    if (localStorage.getItem(SEEN_KEYS[what])) return true;
+    if (!localStorage.getItem('puma-seen-' + what)) return false;
+    localStorage.setItem(SEEN_KEYS[what], '1');
+    localStorage.removeItem('puma-seen-' + what);
+    return true;
+  } catch(e) { return false; }
+}
+function markSeen(what) {
+  try { localStorage.setItem(SEEN_KEYS[what], '1'); } catch(e) { /* no storage */ }
 }
 
 function restoreSiemStrip() {
@@ -3434,7 +3451,7 @@ function createIncident(threat) {
   G.incidents.push(incident);
   _newIncidentIds.add(incident.id);
   // One-shot onboarding tip for first-time players
-  if (!G._onboardIncident && !localStorage.getItem('puma-seen-intro')) {
+  if (!G._onboardIncident && !hasSeen('intro')) {
     G._onboardIncident = true;
     siemLog('INFO', 'ONBOARD', 'Incident active. Click ASSIGN ANALYST on the card to begin IR. Unassigned incidents become breaches.');
   }
@@ -3560,7 +3577,7 @@ function tick() {
     G.nextIncomeIn = INCOME_INTERVAL_MINS;
     siemLog('OK', 'FINANCE', `Security budget allocation received: +${fmt$(G.incomeAmount)}`, `Total: ${fmt$(G.budget)}`);
     // One-shot onboarding tip for first-time players
-    if (!G._onboardIncome && !localStorage.getItem('puma-seen-intro')) {
+    if (!G._onboardIncome && !hasSeen('intro')) {
       G._onboardIncome = true;
       siemLog('INFO', 'ONBOARD', 'Budget allocated. Idle budget does not defend you — invest in Detection Engineering rules and analysts.');
     }
@@ -3886,7 +3903,7 @@ function tick() {
       // Demo loops: freeze this run and restart quietly rather than showing the
       // win screen. gameOver stops the tick, so this branch cannot re-fire during
       // the hand-off and triggerWin cannot sneak in once the demo flag drops —
-      // that used to flash the win overlay and stamp puma-seen-intro from a demo.
+      // that used to flash the win overlay and stamp the intro flag from a demo.
       G.gameOver = true;
       setTimeout(() => { if (_demoMode) { exitDemoMode(); setTimeout(startDemoMode, 800); } }, 500);
     } else {
@@ -4200,7 +4217,7 @@ let _deathSoundTimers = [];
 
 function triggerGameOver(reason) {
   clearSavedState();
-  localStorage.setItem('puma-seen-intro', '1');
+  markSeen('intro');
   G.gameOver = true;
   G.gameOverReason = reason;
   document.getElementById('gameover-reason').textContent = reason;
@@ -4212,7 +4229,7 @@ function triggerGameOver(reason) {
 
 function triggerWin() {
   clearSavedState();
-  localStorage.setItem('puma-seen-intro', '1');
+  markSeen('intro');
   G.gameOver = true;
   G.won = true;
   const s = computeFinalScore();
@@ -6259,6 +6276,17 @@ document.addEventListener('keydown', e => {
     _konamiIdx = (e.key === _KONAMI_SEQ[0]) ? 1 : 0;
   }
 
+  // Escape closes whatever is on top: help, a panel modal, or the SIEM popout
+  if (e.key === 'Escape') {
+    const modal = document.querySelector('.modal-overlay.visible');
+    if (document.getElementById('help-overlay').classList.contains('visible')) closeHelp();
+    else if (modal) closeModal(modal.id.replace('modal-', ''));
+    else if (document.getElementById('siem-popout').classList.contains('visible')) closeSiemPopout();
+    else return;
+    e.preventDefault();
+    return;
+  }
+
   const modalBlocked = anyModalOpen() || document.getElementById('help-overlay').classList.contains('visible');
   if (e.code === 'Space' && !modalBlocked) {
     e.preventDefault();
@@ -6796,8 +6824,8 @@ function startGame() {
   scheduleCrtFlicker();
   initMobileTabs();
 
-  // First-run onboarding drip — shown only once, before puma-seen-intro is set
-  if (!localStorage.getItem('puma-seen-intro')) {
+  // First-run onboarding drip — shown only once, before the intro flag is set
+  if (!hasSeen('intro')) {
     setTimeout(() => {
       if (!G || G.gameOver) return;
       siemLog('INFO', 'ONBOARD', 'New analyst session. Open Detection Engineering (right panel) and upgrade rule categories to raise Coverage %.');
@@ -6811,8 +6839,8 @@ function startGame() {
   // Help auto-show: first-time players see the manual immediately (game auto-pauses).
   // Returning players get a 60-second pulse on the ? button as a soft reminder.
   if (!_demoMode) {
-    if (!localStorage.getItem('puma-seen-help')) {
-      localStorage.setItem('puma-seen-help', '1');
+    if (!hasSeen('help')) {
+      markSeen('help');
       openHelp();
     } else {
       const helpBtn = document.getElementById('help-btn');
