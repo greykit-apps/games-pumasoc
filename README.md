@@ -14,6 +14,8 @@ Survive seven game days with fewer than three breaches. Three difficulties, Anal
 
 ![Difficulty selection — Analyst, Engineer, and Hunter profiles](screenshots/difficulty-select.png)
 
+It opens on greykit's boot, then a terminal title: the logo types itself in over a monitor running a demo shift on autopilot. **R** resumes a saved shift, **N** starts one on Engineer, **C** picks the profile, and **D** watches the demo full screen.
+
 ## Keys
 
 | Key | Action |
@@ -21,11 +23,11 @@ Survive seven game days with fewer than three breaches. Three difficulties, Anal
 | `Space` | Pause / resume |
 | `1`–`4` | Game speed (1×–4×) |
 | `?` | How to play |
-| `M` | Mute / unmute |
+| `M` | Sound on / off, anywhere |
 
 ## Saves
 
-The game auto-saves every ~10 seconds and on leaving the page, in the browser's `localStorage` under `pumasoc_save`, and picks up where it left off. **NEW GAME** in the header starts again from the difficulty screen.
+The game auto-saves every ~10 seconds and on leaving the page, in the browser's `localStorage` under `pumasoc_save`; **Resume shift** on the title picks up where it left off. **NEW GAME** in the header ends the shift and goes back to the title. Settings → **Forget everything** clears all PumaSOC keeps in the browser.
 
 ## Credits
 
